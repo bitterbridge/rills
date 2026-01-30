@@ -1,13 +1,12 @@
 """Tests for event system."""
 
-import pytest
 from rills.events import (
     EventRegistry,
-    ZombieEvent,
     GhostEvent,
-    SleepwalkerEvent,
-    InsomniacEvent,
     GunNutEvent,
+    InsomniacEvent,
+    SleepwalkerEvent,
+    ZombieEvent,
 )
 from rills.game import GameState
 from rills.player import Player
@@ -92,7 +91,7 @@ class TestGhostEvent:
         player = Player(name="Frank", role=Role.VILLAGER, personality="Normal")
         other = Player(name="Bob", role=Role.VILLAGER, personality="Normal")
 
-        game = GameState(players=[player, other])
+        _game = GameState(players=[player, other])
         event = GhostEvent()
         event.activate()
 
@@ -175,7 +174,8 @@ class TestInsomniacEvent:
 
         # Insomniac should have seen the doctor (who moves at night)
         assert insomniac.insomniac_sighting == "Bob"
-        assert len(insomniac.memories) > 0
+        # Information is tracked by InformationService, not memories
+        # The sighting is stored in the insomniac_sighting field
 
 
 class TestGunNutEvent:

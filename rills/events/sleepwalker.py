@@ -1,7 +1,9 @@
 """Sleepwalker event - a player wanders at night."""
 
-from typing import TYPE_CHECKING
 import random
+from typing import TYPE_CHECKING
+
+from ..models import PlayerModifier
 from .base import EventModifier
 
 if TYPE_CHECKING:
@@ -27,20 +29,19 @@ class SleepwalkerEvent(EventModifier):
     def setup_game(self, game: "GameState") -> None:
         """Assign sleepwalker to a random non-suicidal villager."""
         available = [
-            p for p in game.players
-            if p.team == "village" and not p.suicidal
+            p
+            for p in game.players
+            if p.team == "village" and not (p.suicidal or p.has_modifier(game, "suicidal"))
         ]
 
         if available:
             sleepwalker = random.choice(available)
-            sleepwalker.is_sleepwalker = True
+            sleepwalker.is_sleepwalker = True  # Old flag (backward compatibility)
+            sleepwalker.add_modifier(
+                game, PlayerModifier(type="sleepwalker", source="event:sleepwalker")
+            )  # NEW: permanent modifier
 
-    def on_player_eliminated(
-        self,
-        game: "GameState",
-        player: "Player",
-        reason: str
-    ) -> None:
+    def on_player_eliminated(self, game: "GameState", player: "Player", reason: str) -> None:
         """No special behavior on elimination."""
         pass
 

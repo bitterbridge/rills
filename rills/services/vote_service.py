@@ -1,9 +1,9 @@
 """Vote service for managing voting and vote tracking."""
 
-from typing import Optional, Callable
-from collections import Counter
+from collections.abc import Callable
+from typing import Any
 
-from rills.models import Vote, VoteResult, Visibility
+from rills.models import Vote, VoteResult
 from rills.models.voting import VotingHistory
 
 
@@ -13,13 +13,15 @@ class VoteService:
     def __init__(self):
         self.history = VotingHistory()
 
-    def conduct_vote(self,
-                    voters: list[any],
-                    candidates: list[any],
-                    day: int,
-                    round_number: int,
-                    get_vote_func: Callable,
-                    modifiers: Optional[dict[str, list]] = None) -> VoteResult:
+    def conduct_vote(
+        self,
+        voters: list[Any],
+        candidates: list[Any],
+        day: int,
+        round_number: int,
+        get_vote_func: Callable,
+        modifiers: dict[str, list] | None = None,
+    ) -> VoteResult:
         """
         Conduct a voting round.
 
@@ -63,16 +65,12 @@ class VoteService:
                 round_number=round_number,
                 day_number=day,
                 original_target=original_choice if original_choice != choice else None,
-                thinking=thinking
+                thinking=thinking,
             )
             votes.append(vote)
 
         # Create result
-        result = VoteResult(
-            day_number=day,
-            round_number=round_number,
-            votes=votes
-        )
+        result = VoteResult(day_number=day, round_number=round_number, votes=votes)
 
         # Add to history
         self.history.add_result(result)
@@ -104,15 +102,16 @@ class VoteService:
             return 0.0
 
         # Count how many times they voted for the same person
-        aligned = sum(1 for v1, v2 in zip(pattern1, pattern2) if v1 == v2)
+        aligned = sum(1 for v1, v2 in zip(pattern1, pattern2, strict=False) if v1 == v2)
         total = min(len(pattern1), len(pattern2))
 
         return aligned / total if total > 0 else 0.0
 
     def get_vote_leaders(self, result: VoteResult, min_votes: int = 1) -> list[tuple[str, int]]:
         """Get players with at least min_votes, sorted by vote count."""
-        leaders = [(name, count) for name, count in result.vote_counts.items()
-                   if count >= min_votes]
+        leaders = [
+            (name, count) for name, count in result.vote_counts.items() if count >= min_votes
+        ]
         return sorted(leaders, key=lambda x: x[1], reverse=True)
 
     def clear(self):

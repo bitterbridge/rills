@@ -1,9 +1,10 @@
 """Pytest configuration and fixtures."""
 
 import pytest
-from rills.roles import Role
-from rills.player import Player
+
 from rills.game import GameState
+from rills.player import Player
+from rills.roles import Role
 
 
 @pytest.fixture

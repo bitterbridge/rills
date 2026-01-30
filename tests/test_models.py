@@ -1,13 +1,20 @@
 """Tests for data models."""
 
-import pytest
-from datetime import datetime, timedelta
+from datetime import datetime
+
 from rills.models import (
-    Information, Visibility, InfoCategory, InformationStore,
-    PlayerState, PlayerModifier,
+    ConversationHistory,
+    ConversationRound,
+    InfoCategory,
+    Information,
+    InformationStore,
     KnowledgeState,
-    Statement, ConversationRound, ConversationHistory,
-    Vote, VoteResult,
+    PlayerModifier,
+    PlayerState,
+    Statement,
+    Visibility,
+    Vote,
+    VoteResult,
 )
 
 
@@ -45,7 +52,7 @@ class TestInformation:
             source="game",
             category=InfoCategory.DEATH,
             visibility=Visibility("public", []),
-            day_number=1
+            day_number=1,
         )
 
         assert info.content == "Alice died. They were a Villager."
@@ -65,7 +72,7 @@ class TestInformationStore:
             content="Test info",
             source="game",
             category=InfoCategory.GAME_STATE,
-            visibility=Visibility("public", [])
+            visibility=Visibility("public", []),
         )
 
         info_id = store.add(info)
@@ -82,7 +89,7 @@ class TestInformationStore:
             content="Public announcement",
             source="game",
             category=InfoCategory.GAME_STATE,
-            visibility=Visibility("public", [])
+            visibility=Visibility("public", []),
         )
         store.add(pub_info)
 
@@ -91,7 +98,7 @@ class TestInformationStore:
             content="Secret for Alice",
             source="game",
             category=InfoCategory.ACTION,
-            visibility=Visibility("private", ["Alice"])
+            visibility=Visibility("private", ["Alice"]),
         )
         store.add(priv_info)
 
@@ -111,7 +118,7 @@ class TestInformationStore:
             content="Death occurred",
             source="game",
             category=InfoCategory.DEATH,
-            visibility=Visibility("public", [])
+            visibility=Visibility("public", []),
         )
         store.add(death_info)
 
@@ -119,7 +126,7 @@ class TestInformationStore:
             content="Vote occurred",
             source="game",
             category=InfoCategory.VOTE,
-            visibility=Visibility("public", [])
+            visibility=Visibility("public", []),
         )
         store.add(vote_info)
 
@@ -135,7 +142,7 @@ class TestInformationStore:
             source="game",
             category=InfoCategory.GAME_STATE,
             visibility=Visibility("public", []),
-            day_number=1
+            day_number=1,
         )
         store.add(day1_info)
 
@@ -144,7 +151,7 @@ class TestInformationStore:
             source="game",
             category=InfoCategory.GAME_STATE,
             visibility=Visibility("public", []),
-            day_number=2
+            day_number=2,
         )
         store.add(day2_info)
 
@@ -157,24 +164,14 @@ class TestPlayerModifier:
     """Test PlayerModifier model."""
 
     def test_create_modifier(self):
-        mod = PlayerModifier(
-            type="zombie",
-            source="event:zombie",
-            applied_on=1,
-            expires_on=None
-        )
+        mod = PlayerModifier(type="zombie", source="event:zombie", applied_on=1, expires_on=None)
 
         assert mod.type == "zombie"
         assert mod.active is True
         assert mod.is_expired(5) is False
 
     def test_expiration(self):
-        mod = PlayerModifier(
-            type="drunk",
-            source="event:drunk",
-            applied_on=1,
-            expires_on=2
-        )
+        mod = PlayerModifier(type="drunk", source="event:drunk", applied_on=1, expires_on=2)
 
         assert mod.is_expired(1) is False
         assert mod.is_expired(2) is False
@@ -192,11 +189,7 @@ class TestPlayerState:
     """Test PlayerState model."""
 
     def test_create_player_state(self):
-        state = PlayerState(
-            name="Alice",
-            role="Villager",
-            team="Village"
-        )
+        state = PlayerState(name="Alice", role="Villager", team="Village")
 
         assert state.name == "Alice"
         assert state.alive is True
@@ -234,12 +227,7 @@ class TestPlayerState:
     def test_update_modifiers_expiration(self):
         state = PlayerState(name="Alice", role="Villager", team="Village")
 
-        modifier = PlayerModifier(
-            type="drunk",
-            source="event:drunk",
-            applied_on=1,
-            expires_on=2
-        )
+        modifier = PlayerModifier(type="drunk", source="event:drunk", applied_on=1, expires_on=2)
         state.add_modifier(modifier)
 
         state.update_modifiers(current_day=1)
@@ -288,7 +276,7 @@ class TestKnowledgeState:
             content="Bob died",
             source="game",
             category=InfoCategory.DEATH,
-            visibility=Visibility("public", [])
+            visibility=Visibility("public", []),
         )
         id1 = store.add(info1)
         knowledge.add_information(id1)
@@ -307,7 +295,7 @@ class TestStatement:
             thinking="Bob voted for me yesterday",
             round_number=1,
             phase="day_discussion",
-            visibility=Visibility("public", [])
+            visibility=Visibility("public", []),
         )
 
         assert stmt.speaker == "Alice"
@@ -319,11 +307,7 @@ class TestConversationRound:
     """Test ConversationRound model."""
 
     def test_add_statement(self):
-        round_obj = ConversationRound(
-            round_number=1,
-            phase="day_discussion",
-            day_number=1
-        )
+        round_obj = ConversationRound(round_number=1, phase="day_discussion", day_number=1)
 
         stmt = Statement.create(
             speaker="Alice",
@@ -331,17 +315,14 @@ class TestConversationRound:
             thinking="Test thinking",
             round_number=1,
             phase="day_discussion",
-            visibility=Visibility("public", [])
+            visibility=Visibility("public", []),
         )
 
         round_obj.add_statement(stmt)
         assert len(round_obj.statements) == 1
 
     def test_get_context_for(self):
-        round_obj = ConversationRound(
-            round_number=1,
-            phase="day_discussion"
-        )
+        round_obj = ConversationRound(round_number=1, phase="day_discussion")
 
         stmt1 = Statement.create(
             speaker="Alice",
@@ -349,7 +330,7 @@ class TestConversationRound:
             thinking="",
             round_number=1,
             phase="day_discussion",
-            visibility=Visibility("public", [])
+            visibility=Visibility("public", []),
         )
         stmt2 = Statement.create(
             speaker="Bob",
@@ -357,7 +338,7 @@ class TestConversationRound:
             thinking="",
             round_number=1,
             phase="day_discussion",
-            visibility=Visibility("public", [])
+            visibility=Visibility("public", []),
         )
 
         round_obj.add_statement(stmt1)
@@ -379,21 +360,14 @@ class TestConversationHistory:
 
     def test_add_round(self):
         history = ConversationHistory()
-        round_obj = ConversationRound(
-            round_number=1,
-            phase="day_discussion",
-            day_number=1
-        )
+        round_obj = ConversationRound(round_number=1, phase="day_discussion", day_number=1)
 
         history.add_round(round_obj)
         assert len(history.rounds) == 1
 
     def test_get_statements_by(self):
         history = ConversationHistory()
-        round_obj = ConversationRound(
-            round_number=1,
-            phase="day_discussion"
-        )
+        round_obj = ConversationRound(round_number=1, phase="day_discussion")
 
         stmt1 = Statement.create(
             speaker="Alice",
@@ -401,7 +375,7 @@ class TestConversationHistory:
             thinking="",
             round_number=1,
             phase="day_discussion",
-            visibility=Visibility("public", [])
+            visibility=Visibility("public", []),
         )
         stmt2 = Statement.create(
             speaker="Bob",
@@ -409,7 +383,7 @@ class TestConversationHistory:
             thinking="",
             round_number=1,
             phase="day_discussion",
-            visibility=Visibility("public", [])
+            visibility=Visibility("public", []),
         )
         stmt3 = Statement.create(
             speaker="Alice",
@@ -417,7 +391,7 @@ class TestConversationHistory:
             thinking="",
             round_number=1,
             phase="day_discussion",
-            visibility=Visibility("public", [])
+            visibility=Visibility("public", []),
         )
 
         round_obj.add_statement(stmt1)
@@ -439,7 +413,7 @@ class TestConversationHistory:
             thinking="",
             round_number=1,
             phase="day_discussion",
-            visibility=Visibility("public", [])
+            visibility=Visibility("public", []),
         )
         stmt2 = Statement.create(
             speaker="Charlie",
@@ -447,7 +421,7 @@ class TestConversationHistory:
             thinking="",
             round_number=1,
             phase="day_discussion",
-            visibility=Visibility("public", [])
+            visibility=Visibility("public", []),
         )
 
         round_obj.add_statement(stmt1)
@@ -462,34 +436,20 @@ class TestVote:
     """Test Vote model."""
 
     def test_create_vote(self):
-        vote = Vote(
-            voter="Alice",
-            target="Bob",
-            round_number=1,
-            day_number=1
-        )
+        vote = Vote(voter="Alice", target="Bob", round_number=1, day_number=1)
 
         assert vote.voter == "Alice"
         assert vote.target == "Bob"
         assert vote.is_abstain() is False
 
     def test_abstain_vote(self):
-        vote = Vote(
-            voter="Alice",
-            target="ABSTAIN",
-            round_number=1,
-            day_number=1
-        )
+        vote = Vote(voter="Alice", target="ABSTAIN", round_number=1, day_number=1)
 
         assert vote.is_abstain() is True
 
     def test_redirected_vote(self):
         vote = Vote(
-            voter="Alice",
-            target="Charlie",
-            round_number=1,
-            day_number=1,
-            original_target="Bob"
+            voter="Alice", target="Charlie", round_number=1, day_number=1, original_target="Bob"
         )
 
         assert vote.was_redirected() is True

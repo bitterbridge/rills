@@ -1,6 +1,5 @@
 """Tests for GameState class."""
 
-import pytest
 from rills.game import GameState, create_game
 from rills.player import Player
 from rills.roles import Role
@@ -62,16 +61,20 @@ class TestGameState:
         assert "Alice" in game_state.events[0]
 
     def test_eliminate_player_memories(self, game_state):
-        """Test that other players remember eliminations."""
+        """Test that other players can access elimination information via InformationService."""
         alice = game_state.get_player_by_name("Alice")
         bob = game_state.get_player_by_name("Bob")
 
-        initial_memories = len(bob.memories)
         game_state.eliminate_player(alice, "Test reason", "Alice was eliminated")
 
-        assert len(bob.memories) == initial_memories + 1
-        # Check for new death message format
-        assert "Alice died. They were an Assassin" in bob.memories[initial_memories]
+        # Check that Bob's knowledge includes the death information
+        from rills.models import InfoCategory
+
+        death_context = game_state.info_service.build_context_for(
+            bob.name, category=InfoCategory.DEATH
+        )
+        assert "Alice died" in death_context
+        assert "Assassin" in death_context
 
     def test_check_win_condition_village_wins(self, game_state):
         """Test win condition when village eliminates all assassins."""
@@ -129,14 +132,12 @@ class TestGameState:
         zombie_event.activate()
         registry.register(zombie_event)
 
-        game = GameState(
-            players=[zombie, villager],
-            event_registry=registry
-        )
+        game = GameState(players=[zombie, villager], event_registry=registry)
 
         game.eliminate_player(zombie, "Killed", "Zed died")
 
         # In zombie mode, a villager should be marked for zombification
+
 
 class TestCreateGame:
     """Test suite for create_game function."""
@@ -196,5 +197,5 @@ class TestCreateGame:
         game = create_game(configs)
 
         # Game should have event registry
-        assert hasattr(game, 'event_registry')
+        assert hasattr(game, "event_registry")
         assert game.event_registry is not None

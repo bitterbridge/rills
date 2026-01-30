@@ -1,12 +1,14 @@
 """Lovers event - two players are linked and die together."""
 
-from typing import TYPE_CHECKING, Optional
 import random
+from typing import TYPE_CHECKING
+
 from .base import EventModifier
 
 if TYPE_CHECKING:
     from ..game import GameState
     from ..player import Player
+    from ..services.effect_service import Effect
 
 
 class LoversEvent(EventModifier):
@@ -17,9 +19,9 @@ class LoversEvent(EventModifier):
     They don't know who their lover is at first.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
-        self._pending_heartbreak: Optional[str] = None  # Name of lover who will die
+        self._pending_heartbreak: str | None = None  # Name of lover who will die
         self._heartbreak_ready: bool = False  # Whether to execute heartbreak this night
 
     @property
@@ -44,26 +46,20 @@ class LoversEvent(EventModifier):
         lover2.is_lover = True
         lover2.lover_name = lover1.name
 
-    def on_player_eliminated(
-        self, game: "GameState", player: "Player", reason: str
-    ) -> None:
+    def on_player_eliminated(self, game: "GameState", player: "Player", reason: str) -> None:
         """Mark the other lover for death if one dies."""
-        if not hasattr(player, 'is_lover') or not player.is_lover:
+        if not hasattr(player, "is_lover") or not player.is_lover:
             return
 
-        if not hasattr(player, 'lover_name'):
+        if not hasattr(player, "lover_name"):
             return
 
         # Find the other lover
-        lover = next(
-            (p for p in game.players if p.name == player.lover_name and p.alive),
-            None
-        )
+        lover = next((p for p in game.players if p.name == player.lover_name and p.alive), None)
 
         if lover:
             self._pending_heartbreak = lover.name
-            # Give the surviving lover a heartbreak notification privately
-            lover.add_memory(f"💔 {player.name} has died. You are heartbroken and feel your life slipping away...")
+            # Note: Heartbreak information will be tracked when they die
 
     def on_night_start(self, game: "GameState") -> None:
         """Mark heartbreak as ready at the start of each new night."""
@@ -76,8 +72,7 @@ class LoversEvent(EventModifier):
             return
 
         lover = next(
-            (p for p in game.players if p.name == self._pending_heartbreak and p.alive),
-            None
+            (p for p in game.players if p.name == self._pending_heartbreak and p.alive), None
         )
 
         if lover:
@@ -85,11 +80,44 @@ class LoversEvent(EventModifier):
             game.eliminate_player(
                 lover,
                 f"Died of a broken heart after losing {lover.lover_name}.",
-                f"{lover.name} was found dead."
+                f"{lover.name} was found dead.",
             )
 
         self._pending_heartbreak = None
         self._heartbreak_ready = False
+
+    def on_night_end_effects(self, game: "GameState") -> list["Effect"]:
+        """Return heartbreak death effect if pending."""
+        from ..services.effect_service import Effect
+
+        if not self._pending_heartbreak or not self._heartbreak_ready:
+            return []
+
+        lover = next(
+            (p for p in game.players if p.name == self._pending_heartbreak and p.alive), None
+        )
+
+        if lover:
+            lover_name = getattr(lover, "lover_name", "their lover")
+            # Reset state
+            self._pending_heartbreak = None
+            self._heartbreak_ready = False
+
+            # Return death effect
+            return [
+                Effect(
+                    type="heartbreak_death",
+                    target=lover.name,
+                    source="lovers_event",
+                    data={
+                        "cause": f"Died of a broken heart after losing {lover_name}",
+                        "public_reason": f"{lover.name} was found dead",
+                        "day": game.day_number,
+                    },
+                )
+            ]
+
+        return []
 
     def get_lover_context(self, player: "Player") -> str:
         """Get lover-specific context.
@@ -100,10 +128,10 @@ class LoversEvent(EventModifier):
         Returns:
             Context string if player is a lover
         """
-        if not hasattr(player, 'is_lover') or not player.is_lover:
+        if not hasattr(player, "is_lover") or not player.is_lover:
             return ""
 
-        lover_name = getattr(player, 'lover_name', 'unknown')
+        lover_name = getattr(player, "lover_name", "unknown")
         return (
             f"\n💕 SECRET: You are in love with {lover_name}!\n"
             f"If {lover_name} dies, you will die of heartbreak the following night.\n"

@@ -1,12 +1,15 @@
 """Bodyguard event - can protect someone by sacrificing themselves."""
 
-from typing import TYPE_CHECKING
 import random
+from typing import TYPE_CHECKING
+
+from ..models import PlayerModifier
 from .base import EventModifier
 
 if TYPE_CHECKING:
     from ..game import GameState
     from ..player import Player
+    from ..services.effect_service import Effect
 
 
 class BodyguardEvent(EventModifier):
@@ -18,7 +21,7 @@ class BodyguardEvent(EventModifier):
     Bodyguard from the game.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self._protected_player: str | None = None
         self._bodyguard_name: str | None = None
@@ -34,7 +37,8 @@ class BodyguardEvent(EventModifier):
     def setup_game(self, game: "GameState") -> None:
         """Assign bodyguard flag to a random villager."""
         available = [
-            p for p in game.players
+            p
+            for p in game.players
             if p.team == "village"
             and not p.suicidal
             and not p.is_sleepwalker
@@ -47,13 +51,15 @@ class BodyguardEvent(EventModifier):
 
         if available:
             bodyguard = random.choice(available)
-            bodyguard.is_bodyguard = True
+            bodyguard.is_bodyguard = True  # Old flag (backward compatibility)
             bodyguard.bodyguard_active = True
+            bodyguard.add_modifier(
+                game,
+                PlayerModifier(type="bodyguard", source="event:bodyguard", data={"active": True}),
+            )  # NEW: permanent modifier with active state
             self._bodyguard_name = bodyguard.name
 
-    def on_player_eliminated(
-        self, game: "GameState", player: "Player", reason: str
-    ) -> None:
+    def on_player_eliminated(self, game: "GameState", player: "Player", reason: str) -> None:
         """No special behavior on elimination."""
         pass
 
@@ -65,9 +71,7 @@ class BodyguardEvent(EventModifier):
         """
         self._protected_player = target_name
 
-    def check_protection(
-        self, game: "GameState", target_name: str
-    ) -> tuple[bool, str | None]:
+    def check_protection(self, game: "GameState", target_name: str) -> tuple[bool, str | None]:
         """Check if bodyguard protects and sacrifices themselves.
 
         Args:
@@ -82,14 +86,13 @@ class BodyguardEvent(EventModifier):
 
         # Find the bodyguard
         bodyguard = next(
-            (p for p in game.players if p.name == self._bodyguard_name and p.alive),
-            None
+            (p for p in game.players if p.name == self._bodyguard_name and p.alive), None
         )
 
         if not bodyguard:
             return False, None
 
-        if not hasattr(bodyguard, 'bodyguard_active') or not bodyguard.bodyguard_active:
+        if not hasattr(bodyguard, "bodyguard_active") or not bodyguard.bodyguard_active:
             return False, None
 
         # Bodyguard sacrifices themselves!
@@ -97,6 +100,49 @@ class BodyguardEvent(EventModifier):
         bodyguard.bodyguard_active = False
 
         return True, bodyguard.name
+
+    def check_protection_effect(
+        self, game: "GameState", target_name: str
+    ) -> tuple[bool, list["Effect"]]:
+        """Check if bodyguard protects and return sacrifice effect.
+
+        Args:
+            game: The game state
+            target_name: Name of player being attacked
+
+        Returns:
+            (protected, effects) - True if protected, with sacrifice effect
+        """
+        from ..services.effect_service import Effect
+
+        if target_name != self._protected_player:
+            return False, []
+
+        # Find the bodyguard
+        bodyguard = next(
+            (p for p in game.players if p.name == self._bodyguard_name and p.alive), None
+        )
+
+        if not bodyguard:
+            return False, []
+
+        if not hasattr(bodyguard, "bodyguard_active") or not bodyguard.bodyguard_active:
+            return False, []
+
+        # Return sacrifice effect
+        return True, [
+            Effect(
+                type="bodyguard_sacrifice",
+                target=bodyguard.name,
+                source="bodyguard_event",
+                data={
+                    "protected_player": target_name,
+                    "cause": f"Died protecting {target_name} from an attack",
+                    "public_reason": f"{bodyguard.name} sacrificed themselves to protect {target_name}",
+                    "day": game.day_number,
+                },
+            )
+        ]
 
     def get_bodyguard_context(self, player: "Player") -> str:
         """Get bodyguard-specific context.
@@ -107,10 +153,10 @@ class BodyguardEvent(EventModifier):
         Returns:
             Context string if player is active bodyguard
         """
-        if not hasattr(player, 'is_bodyguard') or not player.is_bodyguard:
+        if not hasattr(player, "is_bodyguard") or not player.is_bodyguard:
             return ""
 
-        if not hasattr(player, 'bodyguard_active') or not player.bodyguard_active:
+        if not hasattr(player, "bodyguard_active") or not player.bodyguard_active:
             return ""
 
         return (

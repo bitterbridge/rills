@@ -1,12 +1,15 @@
 """Jester event - a player wins if they get lynched."""
 
-from typing import TYPE_CHECKING
 import random
+from typing import TYPE_CHECKING
+
+from ..models import PlayerModifier
 from .base import EventModifier
 
 if TYPE_CHECKING:
     from ..game import GameState
     from ..player import Player
+    from ..services.effect_service import Effect
 
 
 class JesterEvent(EventModifier):
@@ -17,7 +20,7 @@ class JesterEvent(EventModifier):
     game ends (everyone else loses).
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self._jester_won = False
 
@@ -32,7 +35,8 @@ class JesterEvent(EventModifier):
     def setup_game(self, game: "GameState") -> None:
         """Assign jester flag to a random villager."""
         available = [
-            p for p in game.players
+            p
+            for p in game.players
             if p.team == "village"
             and not p.suicidal
             and not p.is_sleepwalker
@@ -45,16 +49,40 @@ class JesterEvent(EventModifier):
 
         if available:
             jester = random.choice(available)
-            jester.is_jester = True
+            jester.is_jester = True  # Old flag (backward compatibility)
+            jester.add_modifier(
+                game, PlayerModifier(type="jester", source="event:jester")
+            )  # NEW: permanent modifier
 
-    def on_player_eliminated(
-        self, game: "GameState", player: "Player", reason: str
-    ) -> None:
-        """Check if jester was lynched."""
-        if reason == "lynched" and hasattr(player, 'is_jester') and player.is_jester:
+    def on_player_eliminated(self, game: "GameState", player: "Player", reason: str) -> None:
+        """Check if jester was lynched (backward compatibility)."""
+        # Keep old behavior for now
+        if reason == "lynched" and hasattr(player, "is_jester") and player.is_jester:
             self._jester_won = True
             print(f"\n🃏 {player.name} was the Jester and has WON by being lynched!")
-            print(f"🎭 JESTER VICTORY! The game ends. Everyone else loses.\n")
+            print("🎭 JESTER VICTORY! The game ends. Everyone else loses.\n")
+
+    def on_player_eliminated_effects(
+        self, game: "GameState", player: "Player", reason: str
+    ) -> list["Effect"]:
+        """Return jester victory effect if jester was lynched."""
+        from ..services.effect_service import Effect
+
+        # Dual-check: old flag or new modifier
+        is_jester = (hasattr(player, "is_jester") and player.is_jester) or player.has_modifier(
+            game, "jester"
+        )
+        if reason == "lynched" and is_jester:
+            # Return a game-ending effect
+            return [
+                Effect(
+                    type="jester_victory",
+                    target="game",
+                    source="jester_event",
+                    data={"winner": player.name},
+                )
+            ]
+        return []
 
     def check_jester_victory(self) -> bool:
         """Check if jester has won.
@@ -73,7 +101,7 @@ class JesterEvent(EventModifier):
         Returns:
             Context string if player is jester, empty otherwise
         """
-        if hasattr(player, 'is_jester') and player.is_jester:
+        if hasattr(player, "is_jester") and player.is_jester:
             return (
                 "\n⚠️  SECRET ROLE: You are the JESTER!\n"
                 "Your goal is to get yourself LYNCHED by the town during a day vote.\n"

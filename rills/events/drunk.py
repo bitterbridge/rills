@@ -1,7 +1,9 @@
 """Drunk event - a player's vote gets redirected randomly."""
 
-from typing import TYPE_CHECKING, Optional
 import random
+from typing import TYPE_CHECKING
+
+from ..models import PlayerModifier
 from .base import EventModifier
 
 if TYPE_CHECKING:
@@ -16,7 +18,7 @@ class DrunkEvent(EventModifier):
     goes to a random player instead of their intended target.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self._vote_redirect: dict[str, str] = {}  # {voter_name: actual_target}
 
@@ -31,7 +33,8 @@ class DrunkEvent(EventModifier):
     def setup_game(self, game: "GameState") -> None:
         """Assign drunk flag to a random villager."""
         available = [
-            p for p in game.players
+            p
+            for p in game.players
             if p.team == "village"
             and not p.suicidal
             and not p.is_sleepwalker
@@ -44,11 +47,14 @@ class DrunkEvent(EventModifier):
 
         if available:
             drunk = random.choice(available)
-            drunk.is_drunk = True
+            drunk.is_drunk = True  # Old flag (backward compatibility)
+            # NEW: Also add drunk modifier
+            drunk.add_modifier(
+                game,
+                PlayerModifier(type="drunk", source="event:drunk", expires_on=game.day_number + 1),
+            )
 
-    def on_player_eliminated(
-        self, game: "GameState", player: "Player", reason: str
-    ) -> None:
+    def on_player_eliminated(self, game: "GameState", player: "Player", reason: str) -> None:
         """No special behavior on elimination."""
         pass
 
@@ -65,7 +71,8 @@ class DrunkEvent(EventModifier):
         Returns:
             The actual target (random if drunk, original otherwise)
         """
-        if not hasattr(voter, 'is_drunk') or not voter.is_drunk:
+        # Check if drunk (old flag only for now, since redirect_vote isn't used yet)
+        if not hasattr(voter, "is_drunk") or not voter.is_drunk:
             return intended_target
 
         # Don't redirect abstentions
@@ -82,7 +89,7 @@ class DrunkEvent(EventModifier):
 
         return actual_target
 
-    def get_redirect_message(self, voter_name: str) -> Optional[str]:
+    def get_redirect_message(self, voter_name: str) -> str | None:
         """Get message if a vote was redirected.
 
         Args:

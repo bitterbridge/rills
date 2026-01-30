@@ -1,7 +1,7 @@
 """Game roles and their behaviors."""
 
 from enum import Enum
-from typing import Protocol
+from typing import TypedDict
 
 
 class Role(str, Enum):
@@ -11,6 +11,7 @@ class Role(str, Enum):
     DOCTOR = "Doctor"
     DETECTIVE = "Detective"
     VIGILANTE = "Vigilante"
+    MAD_SCIENTIST = "Mad Scientist"
     ZOMBIE = "Zombie"
     VILLAGER = "Villager"
 
@@ -22,7 +23,7 @@ class Role(str, Enum):
         return f"a {self.value}"
 
 
-class RoleInfo(Protocol):
+class RoleInfo(TypedDict):
     """Information about a role."""
 
     name: str
@@ -56,6 +57,12 @@ ROLE_DESCRIPTIONS = {
         "description": "You are the Vigilante. ONCE per game, you can choose to eliminate one person at night. You only get ONE shot - use it wisely! Be careful - you could accidentally kill a villager.",
         "night_action": True,
     },
+    Role.MAD_SCIENTIST: {
+        "name": "Mad Scientist",
+        "team": "village",
+        "description": "You are the Mad Scientist. Each night, you choose ONE player to inject with an experimental serum. However, the serum's effect is RANDOM - you don't know what it will do! Possible effects: zombie infection, love potion, confusion/drunkenness, insomnia, sleepwalking, or suicidal thoughts. Choose your test subject wisely!",
+        "night_action": True,
+    },
     Role.ZOMBIE: {
         "name": "Zombie",
         "team": "village",
@@ -71,6 +78,6 @@ ROLE_DESCRIPTIONS = {
 }
 
 
-def get_role_info(role: Role) -> dict:
+def get_role_info(role: Role) -> RoleInfo:
     """Get information about a role."""
-    return ROLE_DESCRIPTIONS[role]
+    return ROLE_DESCRIPTIONS[role]  # type: ignore[return-value]

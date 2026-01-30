@@ -1,14 +1,13 @@
 """Game state and logic."""
 
-from dataclasses import dataclass, field
-from typing import Optional, TYPE_CHECKING
-from collections import Counter
 import random
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING, Optional
 
+from .models.player_state import PlayerModifier, PlayerState
 from .player import Player
 from .roles import Role
-from .services import InformationService, ConversationService, VoteService
-from .models import InfoCategory
+from .services import ContextBuilder, ConversationService, InformationService, VoteService
 
 if TYPE_CHECKING:
     from .events import EventRegistry
@@ -22,20 +21,35 @@ class GameState:
     day_number: int = 1
     phase: str = "night"  # "night" or "day"
     game_over: bool = False
-    winner: Optional[str] = None
+    winner: str | None = None
     events: list[str] = field(default_factory=list)
     event_registry: Optional["EventRegistry"] = None
 
+    # Player state management - NEW in Phase 5
+    player_states: dict[str, PlayerState] = field(default_factory=dict)
+
     # Service layer - initialized in __post_init__
     info_service: InformationService = field(default_factory=InformationService, init=False)
-    conversation_service: ConversationService = field(default_factory=ConversationService, init=False)
+    conversation_service: ConversationService = field(
+        default_factory=ConversationService, init=False
+    )
     vote_service: VoteService = field(default_factory=VoteService, init=False)
+    context_builder: ContextBuilder = field(default=None, init=False)
 
     def __post_init__(self):
         """Initialize services and register players."""
+        # Initialize context builder with info service
+        self.context_builder = ContextBuilder(self.info_service)
+
         # Register all players with information service
         for player in self.players:
             self.info_service.register_player(player.name)
+
+        # Initialize PlayerState for each player - NEW in Phase 5
+        for player in self.players:
+            self.player_states[player.name] = PlayerState(
+                name=player.name, role=player.role.value, team=player.team, alive=player.alive
+            )
 
     def get_alive_players(self) -> list[Player]:
         """Get all players who are still alive."""
@@ -45,14 +59,16 @@ class GameState:
         """Get all alive players on a specific team."""
         return [p for p in self.get_alive_players() if p.team == team]
 
-    def get_player_by_name(self, name: str) -> Optional[Player]:
+    def get_player_by_name(self, name: str) -> Player | None:
         """Find a player by name."""
         for player in self.players:
             if player.name.lower() == name.lower():
                 return player
         return None
 
-    def eliminate_player(self, player: Player, reason: str, public_reason: Optional[str] = None) -> None:
+    def eliminate_player(
+        self, player: Player, reason: str, public_reason: str | None = None
+    ) -> None:
         """Eliminate a player from the game.
 
         Args:
@@ -65,23 +81,20 @@ class GameState:
         event = f"{player.name} ({player.role.value}) has been eliminated. {reason}"
         self.events.append(event)
 
-        # Notify events of elimination
+        # Notify events of elimination and collect effects
         if self.event_registry:
-            self.event_registry.on_player_eliminated(self, player, reason)
+            effects = self.event_registry.on_player_eliminated(self, player, reason)
+            # Apply effects from events
+            self._apply_event_effects(effects)
 
         # Use InformationService to reveal death with role
         self.info_service.reveal_death(
             player_name=player.name,
             role=player.role.display_name(),
             cause=reason,
-            day=self.day_number
+            day=self.day_number,
         )
-
-        # Backwards compatibility: Keep old memory system for now
-        death_message = f"{player.name} died. They were {player.role.display_name()}."
-        for p in self.players:
-            if p != player:
-                p.add_memory(death_message)
+        # Note: Death information automatically tracked by InformationService
 
     def check_win_condition(self) -> bool:
         """Check if the game is over and set winner.
@@ -104,6 +117,78 @@ class GameState:
             return True
 
         return False
+
+    def _apply_event_effects(self, effects: list) -> None:
+        """Apply effects from events to game state.
+
+        Args:
+            effects: List of Effect objects to apply
+        """
+
+        for effect in effects:
+            if effect.type == "jester_victory":
+                # Handle jester victory
+                winner = effect.data.get("winner")
+                self.game_over = True
+                self.winner = "jester"
+                print(f"\n🃏 {winner} was the Jester and has WON by being lynched!")
+                print("🎭 JESTER VICTORY! The game ends. Everyone else loses.\n")
+                self.events.append(f"JESTER VICTORY! {winner} wins!")
+            elif effect.type == "heartbreak_death":
+                # Handle lover dying of heartbreak
+                target = self.get_player_by_name(effect.target)
+                if target and target.alive:
+                    self.eliminate_player(
+                        target,
+                        effect.data.get("cause", "Died of heartbreak"),
+                        effect.data.get("public_reason"),
+                    )
+            elif effect.type == "suicide_death":
+                # Handle suicidal player death
+                target = self.get_player_by_name(effect.target)
+                if target and target.alive:
+                    print_msg = effect.data.get("print_message")
+                    if print_msg:
+                        print(print_msg)
+                    self.eliminate_player(
+                        target,
+                        effect.data.get("cause", "Suicide"),
+                        effect.data.get("public_reason"),
+                    )
+            elif effect.type == "bodyguard_sacrifice":
+                # Handle bodyguard sacrificing themselves
+                target = self.get_player_by_name(effect.target)
+                if target and target.alive:
+                    # Deactivate bodyguard ability
+                    if hasattr(target, "bodyguard_active"):
+                        target.bodyguard_active = False
+                    # Kill the bodyguard
+                    protected = effect.data.get("protected_player")
+                    print(f"\n🛡️  {target.name} sacrifices themselves to protect {protected}!")
+                    self.eliminate_player(
+                        target,
+                        effect.data.get("cause", "Died protecting another"),
+                        effect.data.get("public_reason"),
+                    )
+            elif effect.type == "become_ghost":
+                # Handle ghost transformation
+                target = self.get_player_by_name(effect.target)
+                if target:
+                    target.is_ghost = True  # Old flag (backward compatibility)
+                    target.add_modifier(
+                        self, PlayerModifier(type="ghost", source="ghost_event")
+                    )  # NEW: permanent modifier
+                    print(f"\n👻 {target.name}'s spirit rises as a ghost...")
+                    # Store pending ghost in the event
+                    if self.event_registry:
+                        from .events import GhostEvent
+
+                        for event in self.event_registry.get_active_events():
+                            if isinstance(event, GhostEvent):
+                                event._pending_ghost = target
+                                break
+            # Add more effect types as we migrate events
+            # For now, other effects will be handled by effect_service for player states
 
     def advance_phase(self) -> None:
         """Move to the next phase of the game."""
@@ -134,7 +219,7 @@ def create_game(
     enable_priest: bool = False,
     enable_lovers: bool = False,
     enable_bodyguard: bool = False,
-    chaos_mode: bool = False
+    chaos_mode: bool = False,
 ) -> GameState:
     """
     Create a new game with the specified players.
@@ -158,18 +243,18 @@ def create_game(
         GameState instance
     """
     from .events import (
-        EventRegistry,
-        ZombieEvent,
-        GhostEvent,
-        SleepwalkerEvent,
-        InsomniacEvent,
-        GunNutEvent,
-        SuicidalEvent,
-        DrunkEvent,
-        JesterEvent,
-        PriestEvent,
-        LoversEvent,
         BodyguardEvent,
+        DrunkEvent,
+        EventRegistry,
+        GhostEvent,
+        GunNutEvent,
+        InsomniacEvent,
+        JesterEvent,
+        LoversEvent,
+        PriestEvent,
+        SleepwalkerEvent,
+        SuicidalEvent,
+        ZombieEvent,
     )
 
     # Randomly assign roles
@@ -182,11 +267,7 @@ def create_game(
 
     # Create players with randomized roles and personalities
     players = [
-        Player(
-            name=config["name"],
-            role=roles[i],
-            personality=personalities[i]
-        )
+        Player(name=config["name"], role=roles[i], personality=personalities[i])
         for i, config in enumerate(player_configs)
     ]
 

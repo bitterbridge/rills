@@ -1,12 +1,13 @@
 """Base classes for event system."""
 
-from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Optional
 import random
+from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from ..game import GameState
     from ..player import Player
+    from ..services.effect_service import Effect
 
 
 class EventModifier(ABC):
@@ -17,7 +18,7 @@ class EventModifier(ABC):
     players, game state, or both.
     """
 
-    def __init__(self, probability: float = 0.10):
+    def __init__(self, probability: float = 0.10) -> None:
         """Initialize event modifier.
 
         Args:
@@ -55,15 +56,13 @@ class EventModifier(ABC):
         pass
 
     @abstractmethod
-    def on_player_eliminated(
-        self,
-        game: "GameState",
-        player: "Player",
-        reason: str
-    ) -> None:
+    def on_player_eliminated(self, game: "GameState", player: "Player", reason: str) -> None:
         """Called when a player is eliminated.
 
         Use this to trigger event-specific effects.
+
+        NOTE: This method is being phased out in favor of
+        on_player_eliminated_effects(). For now, both are called.
         """
         pass
 
@@ -71,6 +70,9 @@ class EventModifier(ABC):
         """Called at the start of night phase.
 
         Override to add night-specific behavior.
+
+        NOTE: This method is being phased out in favor of
+        on_night_start_effects(). For now, both are called.
         """
         pass
 
@@ -78,14 +80,54 @@ class EventModifier(ABC):
         """Called at the end of night phase.
 
         Override to add night-end behavior.
+
+        NOTE: This method is being phased out in favor of
+        on_night_end_effects(). For now, both are called.
         """
         pass
+
+    # New effect-based methods (override these for new events)
+
+    def on_player_eliminated_effects(
+        self, game: "GameState", player: "Player", reason: str
+    ) -> list["Effect"]:
+        """Return effects to apply when a player is eliminated.
+
+        This is the new effect-based approach that will replace
+        on_player_eliminated() over time.
+
+        Returns:
+            List of Effect objects to apply
+        """
+        return []
+
+    def on_night_start_effects(self, game: "GameState") -> list["Effect"]:
+        """Return effects to apply at night start.
+
+        This is the new effect-based approach that will replace
+        on_night_start() over time.
+
+        Returns:
+            List of Effect objects to apply
+        """
+        return []
+
+    def on_night_end_effects(self, game: "GameState") -> list["Effect"]:
+        """Return effects to apply at night end.
+
+        This is the new effect-based approach that will replace
+        on_night_end() over time.
+
+        Returns:
+            List of Effect objects to apply
+        """
+        return []
 
 
 class EventRegistry:
     """Registry for managing game events."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize empty event registry."""
         self._events: list[EventModifier] = []
 
@@ -116,21 +158,45 @@ class EventRegistry:
             event.setup_game(game)
 
     def on_player_eliminated(
-        self,
-        game: "GameState",
-        player: "Player",
-        reason: str
-    ) -> None:
-        """Notify all active events of player elimination."""
+        self, game: "GameState", player: "Player", reason: str
+    ) -> list["Effect"]:
+        """Notify all active events of player elimination.
+
+        Returns:
+            List of Effect objects to apply from all events
+        """
+        effects = []
         for event in self.get_active_events():
+            # Call old method for backward compatibility
             event.on_player_eliminated(game, player, reason)
+            # Collect effects from new method
+            effects.extend(event.on_player_eliminated_effects(game, player, reason))
+        return effects
 
-    def on_night_start(self, game: "GameState") -> None:
-        """Notify all active events of night start."""
+    def on_night_start(self, game: "GameState") -> list["Effect"]:
+        """Notify all active events of night start.
+
+        Returns:
+            List of Effect objects to apply from all events
+        """
+        effects = []
         for event in self.get_active_events():
+            # Call old method for backward compatibility
             event.on_night_start(game)
+            # Collect effects from new method
+            effects.extend(event.on_night_start_effects(game))
+        return effects
 
-    def on_night_end(self, game: "GameState") -> None:
-        """Notify all active events of night end."""
+    def on_night_end(self, game: "GameState") -> list["Effect"]:
+        """Notify all active events of night end.
+
+        Returns:
+            List of Effect objects to apply from all events
+        """
+        effects = []
         for event in self.get_active_events():
+            # Call old method for backward compatibility
             event.on_night_end(game)
+            # Collect effects from new method
+            effects.extend(event.on_night_end_effects(game))
+        return effects

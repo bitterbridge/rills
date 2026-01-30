@@ -1,7 +1,7 @@
 """Player state and modifier models."""
 
 from dataclasses import dataclass, field
-from typing import Optional, Any
+from typing import Any
 
 
 @dataclass
@@ -12,7 +12,7 @@ class PlayerModifier:
     source: str  # What created this modifier (e.g., "event:zombie", "event:cupid")
     active: bool = True
     data: dict[str, Any] = field(default_factory=dict)  # Modifier-specific data
-    expires_on: Optional[int] = None  # Day number when this expires, None = permanent
+    expires_on: int | None = None  # Day number when this expires, None = permanent
     applied_on: int = 0  # Day number when this was applied
 
     def is_expired(self, current_day: int) -> bool:
@@ -45,7 +45,7 @@ class PlayerState:
         """Check if player has an active modifier of a specific type."""
         return any(m.type == modifier_type and m.active for m in self.modifiers)
 
-    def get_modifier(self, modifier_type: str) -> Optional[PlayerModifier]:
+    def get_modifier(self, modifier_type: str) -> PlayerModifier | None:
         """Get an active modifier of a specific type."""
         return next((m for m in self.modifiers if m.type == modifier_type and m.active), None)
 

@@ -3,7 +3,7 @@
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Literal, Optional
+from typing import Literal
 from uuid import uuid4
 
 
@@ -25,10 +25,13 @@ class Visibility:
     """Defines who can see a piece of information."""
 
     scope: Literal["public", "private", "team", "role"]
-    targets: list[str] = field(default_factory=list)  # Player names for private/team, empty for public
+    targets: list[str] = field(
+        default_factory=list
+    )  # Player names for private/team, empty for public
 
-    def is_visible_to(self, player_name: str, player_team: Optional[str] = None,
-                      player_role: Optional[str] = None) -> bool:
+    def is_visible_to(
+        self, player_name: str, player_team: str | None = None, player_role: str | None = None
+    ) -> bool:
         """Check if information is visible to a specific player."""
         if self.scope == "public":
             return True
@@ -36,9 +39,8 @@ class Visibility:
             return player_name in self.targets
         elif self.scope == "team":
             return player_team in self.targets if player_team else False
-        elif self.scope == "role":
+        else:  # self.scope == "role"
             return player_role in self.targets if player_role else False
-        return False
 
 
 @dataclass
@@ -56,8 +58,15 @@ class Information:
     metadata: dict = field(default_factory=dict)  # Additional contextual data
 
     @classmethod
-    def create(cls, content: str, source: str, category: InfoCategory,
-               visibility: Visibility, day_number: int = 0, **metadata) -> "Information":
+    def create(
+        cls,
+        content: str,
+        source: str,
+        category: InfoCategory,
+        visibility: Visibility,
+        day_number: int = 0,
+        **metadata,
+    ) -> "Information":
         """Factory method to create Information with auto-generated ID."""
         return cls(
             id=str(uuid4()),
@@ -68,7 +77,7 @@ class Information:
             category=category,
             day_number=day_number,
             revealed_to=set(),
-            metadata=metadata
+            metadata=metadata,
         )
 
 
@@ -91,12 +100,13 @@ class InformationStore:
 
         return info.id
 
-    def get(self, info_id: str) -> Optional[Information]:
+    def get(self, info_id: str) -> Information | None:
         """Get information by ID."""
         return self._info.get(info_id)
 
-    def get_visible_to(self, player_name: str, player_team: Optional[str] = None,
-                       player_role: Optional[str] = None) -> list[Information]:
+    def get_visible_to(
+        self, player_name: str, player_team: str | None = None, player_role: str | None = None
+    ) -> list[Information]:
         """Get all information visible to a player."""
         visible = []
         for info in self._info.values():
@@ -104,15 +114,17 @@ class InformationStore:
                 visible.append(info)
         return sorted(visible, key=lambda i: i.timestamp)
 
-    def query(self,
-              category: Optional[InfoCategory] = None,
-              after: Optional[datetime] = None,
-              before: Optional[datetime] = None,
-              day_number: Optional[int] = None,
-              visible_to: Optional[str] = None,
-              player_team: Optional[str] = None,
-              player_role: Optional[str] = None,
-              source: Optional[str] = None) -> list[Information]:
+    def query(
+        self,
+        category: InfoCategory | None = None,
+        after: datetime | None = None,
+        before: datetime | None = None,
+        day_number: int | None = None,
+        visible_to: str | None = None,
+        player_team: str | None = None,
+        player_role: str | None = None,
+        source: str | None = None,
+    ) -> list[Information]:
         """Query information store with filters."""
         results = []
 
@@ -136,7 +148,9 @@ class InformationStore:
                 continue
             if source and info.source != source:
                 continue
-            if visible_to and not info.visibility.is_visible_to(visible_to, player_team, player_role):
+            if visible_to and not info.visibility.is_visible_to(
+                visible_to, player_team, player_role
+            ):
                 continue
 
             results.append(info)

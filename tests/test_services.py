@@ -1,16 +1,18 @@
 """Tests for service layer."""
 
-import pytest
+from rills.models import InfoCategory, PlayerModifier, PlayerState
 from rills.services import (
-    InformationService, ConversationService, VoteService, EffectService, Effect
-)
-from rills.models import (
-    InformationStore, InfoCategory, PlayerState, PlayerModifier, Visibility
+    ConversationService,
+    Effect,
+    EffectService,
+    InformationService,
+    VoteService,
 )
 
 
 class MockPlayer:
     """Mock player for testing."""
+
     def __init__(self, name: str, personality: str = ""):
         self.name = name
         self.personality = personality
@@ -48,10 +50,7 @@ class TestInformationService:
         service.register_player("Bob")
 
         info_id = service.reveal_to_player(
-            "Alice",
-            "You killed someone",
-            InfoCategory.ACTION,
-            day=1
+            "Alice", "You killed someone", InfoCategory.ACTION, day=1
         )
 
         # Only Alice should know
@@ -69,7 +68,7 @@ class TestInformationService:
             content="You are all assassins",
             category=InfoCategory.TEAM_INFO,
             day=0,
-            team_members=["Alice", "Bob"]
+            team_members=["Alice", "Bob"],
         )
 
         # Alice and Bob should know, Charlie shouldn't
@@ -82,11 +81,7 @@ class TestInformationService:
         service.register_player("Alice")
         service.register_player("Bob")
 
-        info_id = service.reveal_to_all(
-            "Game starts!",
-            InfoCategory.GAME_STATE,
-            day=0
-        )
+        info_id = service.reveal_to_all("Game starts!", InfoCategory.GAME_STATE, day=0)
 
         # Everyone should know
         assert service.knowledge["Alice"].knows_about(info_id)
@@ -124,7 +119,7 @@ class TestConversationService:
         players = [
             MockPlayer("Alice", "aggressive and bold"),
             MockPlayer("Bob", "quiet and timid"),
-            MockPlayer("Charlie", "neutral person")
+            MockPlayer("Charlie", "neutral person"),
         ]
 
         # Run multiple times to verify it's deterministic enough
@@ -145,10 +140,7 @@ class TestConversationService:
     def test_conduct_round(self):
         service = ConversationService()
 
-        players = [
-            MockPlayer("Alice"),
-            MockPlayer("Bob")
-        ]
+        players = [MockPlayer("Alice"), MockPlayer("Bob")]
 
         def get_statement(player, context, round_num):
             return (f"{player.name} thinking", f"{player.name} says hello")
@@ -158,7 +150,7 @@ class TestConversationService:
             phase="test_phase",
             round_number=1,
             day_number=1,
-            get_statement_func=get_statement
+            get_statement_func=get_statement,
         )
 
         assert len(round_obj.statements) == 2
@@ -168,10 +160,7 @@ class TestConversationService:
     def test_conduct_round_with_context(self):
         service = ConversationService()
 
-        players = [
-            MockPlayer("Alice"),
-            MockPlayer("Bob")
-        ]
+        players = [MockPlayer("Alice"), MockPlayer("Bob")]
 
         contexts_seen = []
 
@@ -184,7 +173,7 @@ class TestConversationService:
             phase="test",
             round_number=1,
             day_number=1,
-            get_statement_func=get_statement
+            get_statement_func=get_statement,
         )
 
         # First speaker sees no context
@@ -207,7 +196,7 @@ class TestConversationService:
                 phase="test",
                 round_number=i,
                 day_number=1,
-                get_statement_func=get_statement
+                get_statement_func=get_statement,
             )
 
         recent = service.get_recent_statements("Alice", count=3)
@@ -226,7 +215,7 @@ class TestConversationService:
             phase="discussion",
             round_number=1,
             day_number=1,
-            get_statement_func=get_statement
+            get_statement_func=get_statement,
         )
 
         # Without thinking
@@ -255,11 +244,7 @@ class TestVoteService:
             return ("Charlie", f"I vote {player.name}")
 
         result = service.conduct_vote(
-            voters=voters,
-            candidates=candidates,
-            day=1,
-            round_number=1,
-            get_vote_func=get_vote
+            voters=voters, candidates=candidates, day=1, round_number=1, get_vote_func=get_vote
         )
 
         assert result.eliminated == "Charlie"
@@ -279,11 +264,7 @@ class TestVoteService:
             return ("Alice", "Vote Alice")
 
         result = service.conduct_vote(
-            voters=voters,
-            candidates=candidates,
-            day=1,
-            round_number=1,
-            get_vote_func=get_vote
+            voters=voters, candidates=candidates, day=1, round_number=1, get_vote_func=get_vote
         )
 
         assert result.eliminated is None
@@ -306,7 +287,7 @@ class TestVoteService:
                 candidates=candidates,
                 day=day,
                 round_number=1,
-                get_vote_func=get_vote
+                get_vote_func=get_vote,
             )
 
         pattern = service.get_voting_pattern("Alice")
@@ -320,7 +301,7 @@ class TestVoteService:
 
         vote_choices = {
             1: {"Alice": "Charlie", "Bob": "Charlie"},  # Aligned
-            2: {"Alice": "Bob", "Bob": "Alice"},         # Not aligned
+            2: {"Alice": "Bob", "Bob": "Alice"},  # Not aligned
             3: {"Alice": "Charlie", "Bob": "Charlie"},  # Aligned
         }
 
@@ -334,11 +315,11 @@ class TestVoteService:
                 candidates=candidates,
                 day=day,
                 round_number=1,
-                get_vote_func=get_vote
+                get_vote_func=get_vote,
             )
 
         alignment = service.analyze_voting_alignment("Alice", "Bob")
-        assert alignment == 2/3  # Aligned 2 out of 3 times
+        assert alignment == 2 / 3  # Aligned 2 out of 3 times
 
 
 class TestEffectService:
@@ -347,19 +328,13 @@ class TestEffectService:
     def test_add_modifier(self):
         service = EffectService()
 
-        states = {
-            "Alice": PlayerState(name="Alice", role="Villager", team="Village")
-        }
+        states = {"Alice": PlayerState(name="Alice", role="Villager", team="Village")}
 
         effect = Effect(
             type="add_modifier",
             target="Alice",
             source="event:drunk",
-            data={
-                "modifier_type": "drunk",
-                "applied_on": 1,
-                "expires_on": 2
-            }
+            data={"modifier_type": "drunk", "applied_on": 1, "expires_on": 2},
         )
 
         new_states = service.apply(effect, states)
@@ -369,18 +344,11 @@ class TestEffectService:
     def test_remove_modifier(self):
         service = EffectService()
 
-        states = {
-            "Alice": PlayerState(name="Alice", role="Villager", team="Village")
-        }
-        states["Alice"].add_modifier(
-            PlayerModifier(type="drunk", source="test")
-        )
+        states = {"Alice": PlayerState(name="Alice", role="Villager", team="Village")}
+        states["Alice"].add_modifier(PlayerModifier(type="drunk", source="test"))
 
         effect = Effect(
-            type="remove_modifier",
-            target="Alice",
-            source="game",
-            data={"modifier_type": "drunk"}
+            type="remove_modifier", target="Alice", source="game", data={"modifier_type": "drunk"}
         )
 
         new_states = service.apply(effect, states)
@@ -390,15 +358,13 @@ class TestEffectService:
     def test_kill_player(self):
         service = EffectService()
 
-        states = {
-            "Alice": PlayerState(name="Alice", role="Villager", team="Village")
-        }
+        states = {"Alice": PlayerState(name="Alice", role="Villager", team="Village")}
 
         effect = Effect(
             type="kill_player",
             target="Alice",
             source="event:assassin",
-            data={"cause": "assassination", "day": 1}
+            data={"cause": "assassination", "day": 1},
         )
 
         new_states = service.apply(effect, states)
@@ -409,15 +375,13 @@ class TestEffectService:
     def test_change_role(self):
         service = EffectService()
 
-        states = {
-            "Alice": PlayerState(name="Alice", role="Villager", team="Village")
-        }
+        states = {"Alice": PlayerState(name="Alice", role="Villager", team="Village")}
 
         effect = Effect(
             type="change_role",
             target="Alice",
             source="event:shapeshifter",
-            data={"new_role": "Assassin"}
+            data={"new_role": "Assassin"},
         )
 
         new_states = service.apply(effect, states)
@@ -427,23 +391,16 @@ class TestEffectService:
     def test_apply_batch(self):
         service = EffectService()
 
-        states = {
-            "Alice": PlayerState(name="Alice", role="Villager", team="Village")
-        }
+        states = {"Alice": PlayerState(name="Alice", role="Villager", team="Village")}
 
         effects = [
             Effect(
                 type="add_modifier",
                 target="Alice",
                 source="test",
-                data={"modifier_type": "drunk", "applied_on": 1}
+                data={"modifier_type": "drunk", "applied_on": 1},
             ),
-            Effect(
-                type="change_role",
-                target="Alice",
-                source="test",
-                data={"new_role": "Zombie"}
-            )
+            Effect(type="change_role", target="Alice", source="test", data={"new_role": "Zombie"}),
         ]
 
         new_states = service.apply_batch(effects, states)
@@ -453,11 +410,7 @@ class TestEffectService:
 
     def test_create_modifier_effect_factory(self):
         effect = EffectService.create_modifier_effect(
-            target="Alice",
-            modifier_type="drunk",
-            source="event:drunk",
-            expires_on=2,
-            applied_on=1
+            target="Alice", modifier_type="drunk", source="event:drunk", expires_on=2, applied_on=1
         )
 
         assert effect.type == "add_modifier"
@@ -466,10 +419,7 @@ class TestEffectService:
 
     def test_create_death_effect_factory(self):
         effect = EffectService.create_death_effect(
-            target="Alice",
-            source="assassin",
-            cause="assassination",
-            day=1
+            target="Alice", source="assassin", cause="assassination", day=1
         )
 
         assert effect.type == "kill_player"

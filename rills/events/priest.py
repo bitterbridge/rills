@@ -1,7 +1,9 @@
 """Priest event - can resurrect a dead player once per game."""
 
-from typing import TYPE_CHECKING, Optional
 import random
+from typing import TYPE_CHECKING, Optional
+
+from ..models import PlayerModifier
 from .base import EventModifier
 
 if TYPE_CHECKING:
@@ -17,7 +19,7 @@ class PriestEvent(EventModifier):
     power until they attempt to use it.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self._resurrection_used = False
 
@@ -32,7 +34,8 @@ class PriestEvent(EventModifier):
     def setup_game(self, game: "GameState") -> None:
         """Assign priest flag to a random villager."""
         available = [
-            p for p in game.players
+            p
+            for p in game.players
             if p.team == "village"
             and not p.suicidal
             and not p.is_sleepwalker
@@ -45,12 +48,16 @@ class PriestEvent(EventModifier):
 
         if available:
             priest = random.choice(available)
-            priest.is_priest = True
+            priest.is_priest = True  # Old flag (backward compatibility)
             priest.resurrection_available = True
+            priest.add_modifier(
+                game,
+                PlayerModifier(
+                    type="priest", source="event:priest", data={"resurrections_available": 1}
+                ),
+            )  # NEW: permanent modifier with resurrection count
 
-    def on_player_eliminated(
-        self, game: "GameState", player: "Player", reason: str
-    ) -> None:
+    def on_player_eliminated(self, game: "GameState", player: "Player", reason: str) -> None:
         """No special behavior on elimination."""
         pass
 
@@ -67,10 +74,14 @@ class PriestEvent(EventModifier):
         Returns:
             The resurrected player if successful, None otherwise
         """
-        if not hasattr(priest, 'is_priest') or not priest.is_priest:
+        # Dual-check: old flag or new modifier
+        is_priest = (hasattr(priest, "is_priest") and priest.is_priest) or priest.has_modifier(
+            game, "priest"
+        )
+        if not is_priest:
             return None
 
-        if not hasattr(priest, 'resurrection_available') or not priest.resurrection_available:
+        if not hasattr(priest, "resurrection_available") or not priest.resurrection_available:
             return None
 
         if self._resurrection_used:
@@ -101,9 +112,9 @@ class PriestEvent(EventModifier):
             True if they can resurrect, False otherwise
         """
         return (
-            hasattr(priest, 'is_priest')
+            hasattr(priest, "is_priest")
             and priest.is_priest
-            and hasattr(priest, 'resurrection_available')
+            and hasattr(priest, "resurrection_available")
             and priest.resurrection_available
             and not self._resurrection_used
         )

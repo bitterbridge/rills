@@ -1,8 +1,7 @@
 """Voting models and vote result tracking."""
 
-from dataclasses import dataclass, field
-from typing import Optional
 from collections import Counter
+from dataclasses import dataclass, field
 
 
 @dataclass
@@ -13,7 +12,7 @@ class Vote:
     target: str  # Player name or "ABSTAIN"
     round_number: int  # Usually 1, could support multiple vote rounds
     day_number: int
-    original_target: Optional[str] = None  # For drunk modifier tracking
+    original_target: str | None = None  # For drunk modifier tracking
     thinking: str = ""  # Voter's reasoning
 
     def is_abstain(self) -> bool:
@@ -37,7 +36,7 @@ class VoteResult:
     day_number: int
     round_number: int
     votes: list[Vote] = field(default_factory=list)
-    eliminated: Optional[str] = None
+    eliminated: str | None = None
     tied: bool = False
     tied_players: list[str] = field(default_factory=list)
     vote_counts: dict[str, int] = field(default_factory=dict)
@@ -114,7 +113,9 @@ class VoteResult:
             lines.append(f"\nResult: TIE between {', '.join(self.tied_players)}")
             lines.append("No one is eliminated.")
         elif self.eliminated:
-            lines.append(f"\nResult: {self.eliminated} is eliminated with {self.vote_counts[self.eliminated]} vote(s)")
+            lines.append(
+                f"\nResult: {self.eliminated} is eliminated with {self.vote_counts[self.eliminated]} vote(s)"
+            )
         else:
             lines.append("\nResult: No one is eliminated (no votes cast)")
 

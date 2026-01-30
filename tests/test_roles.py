@@ -1,7 +1,6 @@
 """Tests for roles module."""
 
-import pytest
-from rills.roles import Role, get_role_info, ROLE_DESCRIPTIONS
+from rills.roles import Role, get_role_info
 
 
 class TestRoles:
@@ -14,16 +13,18 @@ class TestRoles:
             Role.DOCTOR,
             Role.DETECTIVE,
             Role.VIGILANTE,
+            Role.MAD_SCIENTIST,
             Role.ZOMBIE,
             Role.VILLAGER,
         ]
-        assert len(expected_roles) == 6
+        assert len(expected_roles) == 7
 
     def test_role_values(self):
         """Test role string values."""
         assert Role.ASSASSINS.value == "Assassins"
         assert Role.DOCTOR.value == "Doctor"
         assert Role.DETECTIVE.value == "Detective"
+        assert Role.MAD_SCIENTIST.value == "Mad Scientist"
         assert Role.VIGILANTE.value == "Vigilante"
         assert Role.ZOMBIE.value == "Zombie"
         assert Role.VILLAGER.value == "Villager"
@@ -58,6 +59,14 @@ class TestRoles:
         assert info["name"] == "Vigilante"
         assert info["team"] == "village"
         assert info["night_action"] is True
+
+    def test_get_role_info_mad_scientist(self):
+        """Test getting Mad Scientist role info."""
+        info = get_role_info(Role.MAD_SCIENTIST)
+        assert info["name"] == "Mad Scientist"
+        assert info["team"] == "village"
+        assert info["night_action"] is True
+        assert "inject" in info["description"].lower() or "serum" in info["description"].lower()
 
     def test_get_role_info_zombie(self):
         """Test getting Zombie role info."""

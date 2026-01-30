@@ -2,22 +2,24 @@
 
 import argparse
 import time
+
 from rich.console import Console
-from rich.panel import Panel
 from rich.table import Table
 
 from .game import GameState, create_game
 from .llm import LLMAgent
+from .models import InfoCategory
 from .phases import PhaseManager
+from .phases.utils import get_speaking_order
 from .roles import Role
-
 
 console = Console()
 
 
 def display_game_start(game: GameState) -> None:
     """Display game start information."""
-    console.print("\n[bold cyan]🎭 ASSASSINS - LLM Edition 🎭[/bold cyan]\n")
+    print("\n# 🎭 Assassins - LLM Edition\n")
+    print("## Setup\n")
 
     # Display active random events
     if game.event_registry:
@@ -36,25 +38,33 @@ def display_game_start(game: GameState) -> None:
     for player in game.players:
         # Build role info string with modifiers
         role_info = [player.role.value]
-        if player.suicidal:
+        # Dual-check: old flag or new modifier
+        if player.suicidal or player.has_modifier(game, "suicidal"):
             role_info.append("Suicidal")
-        if player.is_sleepwalker:
+        if player.is_sleepwalker or player.has_modifier(game, "sleepwalker"):
             role_info.append("Sleepwalker")
-        if player.is_insomniac:
+        if player.is_insomniac or player.has_modifier(game, "insomniac"):
             role_info.append("Insomniac")
-        if player.is_gun_nut:
+        if player.is_gun_nut or player.has_modifier(game, "gun_nut"):
             role_info.append("Gun Nut")
-        if player.is_drunk:
+        # Dual-check: old flag or new modifier
+        if player.is_drunk or player.has_modifier(game, "drunk"):
             role_info.append("Drunk")
-        if player.is_jester:
+        if player.is_jester or player.has_modifier(game, "jester"):
             role_info.append("Jester")
-        if player.is_priest and player.resurrection_available:
+        is_priest = player.is_priest or player.has_modifier(game, "priest")
+        if is_priest and player.resurrection_available:
             role_info.append("Priest")
-        if player.is_lover:
+        # Dual-check: old flag or new modifier
+        is_lover = player.is_lover or player.has_modifier(game, "lover")
+        if is_lover:
             role_info.append(f"Lover({player.lover_name})")
-        if player.is_bodyguard and player.bodyguard_active:
+        is_bodyguard = player.is_bodyguard or player.has_modifier(game, "bodyguard")
+        if is_bodyguard and player.bodyguard_active:
             role_info.append("Bodyguard")
-        if player.is_zombie and player.role != Role.ZOMBIE:
+        # Dual-check: old flag or new modifier
+        is_zombie = player.is_zombie or player.has_modifier(game, "zombie")
+        if is_zombie and player.role != Role.ZOMBIE:
             role_info.append("Infected")
 
         role_str = " + ".join(role_info)
@@ -73,30 +83,40 @@ def display_game_status(game: GameState) -> None:
     for player in alive:
         # Build role info string for human viewing
         role_info = [player.role.value]
-        if player.suicidal:
+        # Dual-check: old flag or new modifier
+        if player.suicidal or player.has_modifier(game, "suicidal"):
             role_info.append("Suicidal")
-        if player.is_sleepwalker:
+        if player.is_sleepwalker or player.has_modifier(game, "sleepwalker"):
             role_info.append("Sleepwalker")
-        if player.is_insomniac:
+        if player.is_insomniac or player.has_modifier(game, "insomniac"):
             role_info.append("Insomniac")
-        if player.is_gun_nut:
+        if player.is_gun_nut or player.has_modifier(game, "gun_nut"):
             role_info.append("Gun Nut")
-        if player.is_drunk:
+        # Dual-check: old flag or new modifier
+        if player.is_drunk or player.has_modifier(game, "drunk"):
             role_info.append("Drunk")
-        if player.is_jester:
+        if player.is_jester or player.has_modifier(game, "jester"):
             role_info.append("Jester")
-        if player.is_priest and player.resurrection_available:
+        is_priest = player.is_priest or player.has_modifier(game, "priest")
+        if is_priest and player.resurrection_available:
             role_info.append("Priest")
-        if player.is_lover:
+        # Dual-check: old flag or new modifier
+        is_lover = player.is_lover or player.has_modifier(game, "lover")
+        if is_lover:
             role_info.append(f"Lover({player.lover_name})")
-        if player.is_bodyguard and player.bodyguard_active:
+        is_bodyguard = player.is_bodyguard or player.has_modifier(game, "bodyguard")
+        if is_bodyguard and player.bodyguard_active:
             role_info.append("Bodyguard")
         # Show "Infected" for living zombies, they become "Zombie" after death
-        if player.is_zombie and player.role != Role.ZOMBIE:
+        # Dual-check: old flag or new modifier
+        is_zombie = player.is_zombie or player.has_modifier(game, "zombie")
+        if is_zombie and player.role != Role.ZOMBIE:
             role_info.append("Infected")
-        if player.pending_zombification:
+        # Dual-check: old flag or new modifier
+        if player.pending_zombification or player.has_modifier(game, "pending_zombification"):
             role_info.append("Becoming Infected")
-        if player.vigilante_has_killed:
+        # Dual-check: old flag or new modifier
+        if player.vigilante_has_killed or player.has_modifier(game, "vigilante_used"):
             role_info.append("Vig Used")
 
         role_str = " + ".join(role_info)
@@ -105,9 +125,9 @@ def display_game_status(game: GameState) -> None:
 
 def display_game_end(game: GameState) -> None:
     """Display game end information."""
-    console.print("\n" + "="*60)
-    console.print(f"[bold green]🎉 GAME OVER 🎉[/bold green]")
-    console.print("="*60 + "\n")
+    console.print("\n" + "=" * 60)
+    console.print("[bold green]🎉 GAME OVER 🎉[/bold green]")
+    console.print("=" * 60 + "\n")
 
     if game.winner == "village":
         console.print("[bold green]The Village has won![/bold green]")
@@ -136,9 +156,26 @@ def generate_player_configs(num_players: int) -> list[dict]:
     """
     # Extended pool of names
     names = [
-        "Alice", "Bob", "Carol", "David", "Eve", "Frank", "Grace", "Henry", "Iris",
-        "Jack", "Kate", "Liam", "Mia", "Noah", "Olivia", "Paul", "Quinn", "Ruby",
-        "Sam", "Tina"
+        "Alice",
+        "Bob",
+        "Carol",
+        "David",
+        "Eve",
+        "Frank",
+        "Grace",
+        "Henry",
+        "Iris",
+        "Jack",
+        "Kate",
+        "Liam",
+        "Mia",
+        "Noah",
+        "Olivia",
+        "Paul",
+        "Quinn",
+        "Ruby",
+        "Sam",
+        "Tina",
     ]
 
     # Pool of personalities
@@ -162,27 +199,24 @@ def generate_player_configs(num_players: int) -> list[dict]:
         "Diplomatic and fair, seeks compromise",
         "Mysterious and cryptic, speaks in riddles",
         "Blunt and honest, no filter",
-        "Optimistic and cheerful, sees the best in everyone"
+        "Optimistic and cheerful, sees the best in everyone",
     ]
 
     # Role distribution: roughly 1/3 Assassins, rest divided among power roles and villagers
     num_assassins = max(2, num_players // 3)
-    num_power_roles = min(3, num_players - num_assassins - 2)  # Doctor, Detective, Vigilante
-    num_villagers = num_players - num_assassins - num_power_roles - 1  # -1 for Zombie
+    num_power_roles = min(
+        4, num_players - num_assassins - 1
+    )  # Doctor, Detective, Vigilante, Mad Scientist
+    num_villagers = num_players - num_assassins - num_power_roles
 
     roles = (
-        ["Assassins"] * num_assassins +
-        ["Doctor", "Detective", "Vigilante"][:num_power_roles] +
-        ["Villager"] * num_villagers +
-        ["Zombie"]
+        ["Assassins"] * num_assassins
+        + ["Doctor", "Detective", "Vigilante", "Mad Scientist"][:num_power_roles]
+        + ["Villager"] * num_villagers
     )
 
     return [
-        {
-            "name": names[i],
-            "role": roles[i],
-            "personality": personalities[i % len(personalities)]
-        }
+        {"name": names[i], "role": roles[i], "personality": personalities[i % len(personalities)]}
         for i in range(num_players)
     ]
 
@@ -201,9 +235,7 @@ def run_game(game: GameState, llm_agent: LLMAgent, delay: float = 1.0) -> None:
     display_game_start(game)
 
     # Explain basic game rules
-    print(f"\n{'='*60}")
-    print("📖 GAME RULES")
-    print(f"{'='*60}\n")
+    print("### Game Rules\n")
     print("🎯 WIN CONDITIONS:")
     print("   • Village team wins if all Assassins are eliminated")
     print("   • Assassins win if they equal or outnumber the village\n")
@@ -224,9 +256,7 @@ def run_game(game: GameState, llm_agent: LLMAgent, delay: float = 1.0) -> None:
     if game.event_registry:
         active_events = game.event_registry.get_active_events()
         if active_events:
-            print(f"\n{'='*60}")
-            print("⚠️  SPECIAL EVENTS IN THIS GAME")
-            print(f"{'='*60}\n")
+            print("### Special Events\n")
 
             event_explanations = []
             for event in active_events:
@@ -272,7 +302,9 @@ def run_game(game: GameState, llm_agent: LLMAgent, delay: float = 1.0) -> None:
                         "   This can happen multiple times - each attack has a 50% chance of backfiring!"
                     )
                 elif event.name == "Suicidal Mode":
-                    event_explanations.append("💀 SUICIDAL: One player is struggling with dark thoughts and may take their own life during the night!")
+                    event_explanations.append(
+                        "💀 SUICIDAL: One player is struggling with dark thoughts and may take their own life during the night!"
+                    )
                 elif event.name == "Drunk Mode":
                     event_explanations.append(
                         "🍺 DRUNK: One player is drunk and confused.\n"
@@ -318,13 +350,13 @@ def run_game(game: GameState, llm_agent: LLMAgent, delay: float = 1.0) -> None:
     # Tell Assassins who their teammates are
     assassins = [p for p in game.players if p.role == Role.ASSASSINS]
     if len(assassins) > 1:
-        print(f"\n{'='*60}")
-        print("🔪 ASSASSIN TEAM BRIEFING")
-        print(f"{'='*60}\n")
+        print("### Assassin Briefing\n")
         assassin_names = [a.name for a in assassins]
         print(f"The Assassins are: {', '.join(assassin_names)}\n")
         print("You work together to eliminate villagers at night.")
-        print("Coordinate your strategy, but be careful during the day - don't reveal yourselves!\n")
+        print(
+            "Coordinate your strategy, but be careful during the day - don't reveal yourselves!\n"
+        )
 
         # Use InformationService to track team information
         game.info_service.reveal_to_team(
@@ -332,24 +364,21 @@ def run_game(game: GameState, llm_agent: LLMAgent, delay: float = 1.0) -> None:
             content=f"Your Assassin teammates are: {', '.join(assassin_names)}",
             category=InfoCategory.TEAM_INFO,
             day=0,
-            team_members=assassin_names
+            team_members=assassin_names,
         )
-
-        # Backwards compatibility: Keep old memory system
-        for assassin in assassins:
-            teammate_names = [a.name for a in assassins if a != assassin]
-            if teammate_names:
-                assassin.add_memory(f"My fellow Assassins are: {', '.join(teammate_names)}")
+        # Note: Team information automatically tracked by InformationService
 
         time.sleep(3)
 
     # Day 0 - Introduction phase
-    print(f"\n{'='*60}")
-    print("☀️  Day 0 - Introductions")
-    print(f"{'='*60}\n")
+    print("\n## Game\n")
+    print("### ☀️  Day 0\n")
+    print("#### 👋 Introductions\n")
     print("The players gather to introduce themselves...\n")
 
     for player in game.get_alive_players():
+        system_context = game.context_builder.build_system_context(player, "game_start")
+
         thinking, intro = llm_agent.get_player_statement(
             player=player,
             prompt="""Introduce yourself to the group.
@@ -357,16 +386,13 @@ def run_game(game: GameState, llm_agent: LLMAgent, delay: float = 1.0) -> None:
 STRATEGIC GUIDANCE: Be careful what you reveal! If you describe yourself as "logical" or "analytical," the Assassins may target you. If you seem too clever or perceptive, you become a threat. Consider being vague, humble, or even slightly misleading about your capabilities while still being friendly.
 ROLE TERMINOLOGY: Use exact role names - Doctor (not Healer), Detective (not Investigator), Vigilante, Assassins (not Mafia).
 Keep your introduction brief (1-2 sentences).""",
-            context="Day 0 - Introductions",
-            max_tokens=150
+            context=system_context,
+            max_tokens=150,
         )
         print(f"  💭 {player.name} thinks: {thinking}")
         print(f"💬 {player.name}: {intro}\n")
 
-        # Players remember introductions
-        for other in game.get_alive_players():
-            if other != player:
-                other.add_memory(f"{player.name} introduced themselves: {intro}")
+        # Note: Introductions could be tracked in ConversationService if needed
 
     time.sleep(delay)
 
@@ -378,16 +404,14 @@ Keep your introduction brief (1-2 sentences).""",
             phase_manager.run_day_phase(game)
 
         if not game.game_over:
-            display_game_status(game)
             game.advance_phase()
             time.sleep(delay)
 
     display_game_end(game)
 
     # Postgame chat - players talk shit
-    print(f"\n{'='*60}")
-    print("💀 POSTGAME - THE TRUTH COMES OUT")
-    print(f"{'='*60}\n")
+    print("\n## Post-Game\n")
+    print("### 💀 Discussion\n")
     print("Now that the game is over, the players can speak freely...\n")
 
     # Build comprehensive game summary
@@ -398,11 +422,12 @@ Keep your introduction brief (1-2 sentences).""",
             role_display = "Villager (Infected)"
         else:
             role_display = p.role.value
-        role_summary_lines.append(f"  - {p.name} was {role_display} ({'alive' if p.alive else 'dead'})")
+        role_summary_lines.append(
+            f"  - {p.name} was {role_display} ({'alive' if p.alive else 'dead'})"
+        )
     role_summary = "\n".join(role_summary_lines)
 
     # Use personality-weighted speaking order for postgame
-    from .phases import get_speaking_order
     speaking_order = get_speaking_order(game.players)
 
     for player in speaking_order:
@@ -422,7 +447,7 @@ Keep your introduction brief (1-2 sentences).""",
         # Build context of what others have said
         prior_statements = ""
         for other in game.players:
-            if other != player and hasattr(other, '_postgame_statement'):
+            if other != player and hasattr(other, "_postgame_statement"):
                 prior_statements += f"\n{other.name} said: {other._postgame_statement}"
 
         postgame_context = f"""The game is over. The {game.winner} team won.
@@ -452,15 +477,19 @@ Now you can speak freely about:
 IMPORTANT: Be honest about YOUR ACTUAL ROLE ({player.role.value}). Don't claim to be a different role!
 ROLE TERMINOLOGY: Use exact role names - Doctor (not Healer), Detective (not Investigator), Vigilante, Assassins (not Mafia)."""
 
+        system_context = game.context_builder.build_system_context(player, "game_end")
+
         thinking, statement = llm_agent.get_player_statement(
             player=player,
             prompt=f"The game is over. You were {role_display}. What do you want to say about how the game went? (2-3 sentences max)",
-            context=postgame_context,
-            max_tokens=150
+            context=f"{system_context}\n\n{postgame_context}",
+            max_tokens=150,
         )
 
         alive_marker = "" if player.alive else " 💀"
-        ghost_marker = " 👻" if player.is_ghost else ""
+        # Dual-check: old flag or new modifier
+        is_ghost = player.is_ghost or player.has_modifier(game, "ghost")
+        ghost_marker = " 👻" if is_ghost else ""
         print(f"  💭 {player.name} thinks: {thinking}")
         print(f"💬 {player.name}{alive_marker}{ghost_marker} ({role_display}): {statement}\n")
 
@@ -470,16 +499,13 @@ ROLE TERMINOLOGY: Use exact role names - Doctor (not Healer), Detective (not Inv
         time.sleep(delay * 0.5)  # Shorter delay for postgame
 
     # Post-game suggestions and discussion
-    print(f"\n{'='*60}")
-    print("🎯 SUGGESTIONS FOR IMPROVEMENT")
-    print(f"{'='*60}\n")
+    print("### 🎯 Feedback\n")
     print("The players discuss how to improve the game...\n")
 
     for round_num in range(2):  # Two rounds of discussion
-        print(f"--- Round {round_num + 1} ---\n")
+        print(f"#### 💬 Round {round_num + 1}\n")
 
         # Use personality-weighted speaking order
-        from .phases import get_speaking_order
         speaking_order = get_speaking_order(game.players)
 
         for player in speaking_order:
@@ -492,8 +518,19 @@ ROLE TERMINOLOGY: Use exact role names - Doctor (not Healer), Detective (not Inv
             # Build context of what others have said in this round
             prior_discussion = ""
             for other in game.players:
-                if other != player and hasattr(other, f'_suggestion_round_{round_num}'):
-                    prior_discussion += f"\n{other.name} said: {getattr(other, f'_suggestion_round_{round_num}')}"
+                if other != player and hasattr(other, f"_suggestion_round_{round_num}"):
+                    prior_discussion += (
+                        f"\n{other.name} said: {getattr(other, f'_suggestion_round_{round_num}')}"
+                    )
+
+            # For round 2, also include what was said in round 1
+            if round_num == 1:
+                prior_round_discussion = ""
+                for other in game.players:
+                    if hasattr(other, "_suggestion_round_0"):
+                        prior_round_discussion += (
+                            f"\n{other.name} said: {other._suggestion_round_0}"
+                        )
 
             if round_num == 0:
                 suggestion_context = f"""The game is over. Now the players are discussing how to improve the game.
@@ -508,32 +545,40 @@ Think about:
 
 Give constructive feedback about the game design and prompts."""
             else:
-                suggestion_context = f"""Round 2 of feedback discussion.
+                suggestion_context = f"""Round 2 of feedback discussion about improving the game.
 
 You are {player.name}. You were {player_role_display} on the {player.team} team.
 
-Others have shared their feedback. You can:
-- RESPOND to specific points others made
-- Agree or disagree with their suggestions
-- Build on their ideas
-- Add new suggestions you thought of
+In Round 1, players shared suggestions for improving the game mechanics and prompts:{prior_round_discussion}
 
-What others said in this round:{prior_discussion}
+Now you can:
+- RESPOND to specific suggestions others made about improving the game
+- Agree or disagree with their ideas for better prompts/mechanics
+- Build on their suggestions with additional improvements
+- Add new feedback about game design you thought of
 
-Respond to the discussion (1-2 sentences)."""
+What others have said so far in Round 2:{prior_discussion}
+
+Respond to the feedback discussion about improving the game (1-2 sentences)."""
+
+            system_context = game.context_builder.build_system_context(player, "game_end")
 
             thinking, statement = llm_agent.get_player_statement(
                 player=player,
-                prompt="What suggestions do you have for improving the game, prompts, or mechanics? (1-2 sentences)" if round_num == 0 else "Respond to others' feedback or add new thoughts (1-2 sentences)",
-                context=suggestion_context,
-                max_tokens=120
+                prompt=(
+                    "What suggestions do you have for improving the game, prompts, or mechanics? (1-2 sentences)"
+                    if round_num == 0
+                    else "Respond to others' feedback or add new thoughts (1-2 sentences)"
+                ),
+                context=f"{system_context}\n\n{suggestion_context}",
+                max_tokens=120,
             )
 
             print(f"  💭 {player.name} thinks: {thinking}")
             print(f"💬 {player.name}: {statement}\n")
 
             # Store statement for others to read
-            setattr(player, f'_suggestion_round_{round_num}', statement)
+            setattr(player, f"_suggestion_round_{round_num}", statement)
 
             time.sleep(delay * 0.5)
 
@@ -556,74 +601,62 @@ Examples:
 
   Play in CHAOS MODE (all events):
     python play.py --chaos
-"""
+""",
     )
 
     parser.add_argument(
         "--zombie",
         action="store_true",
-        help="Enable Zombie event (infected players rise from the dead)"
+        help="Enable Zombie event (infected players rise from the dead)",
     )
     parser.add_argument(
-        "--ghost",
-        action="store_true",
-        help="Enable Ghost event (dead players haunt the living)"
+        "--ghost", action="store_true", help="Enable Ghost event (dead players haunt the living)"
     )
     parser.add_argument(
         "--sleepwalker",
         action="store_true",
-        help="Enable Sleepwalker event (players wander at night)"
+        help="Enable Sleepwalker event (players wander at night)",
     )
     parser.add_argument(
         "--insomniac",
         action="store_true",
-        help="Enable Insomniac event (player sees others moving at night)"
+        help="Enable Insomniac event (player sees others moving at night)",
     )
     parser.add_argument(
         "--gun-nut",
         action="store_true",
-        help="Enable Gun Nut event (player fights back when attacked)"
+        help="Enable Gun Nut event (player fights back when attacked)",
     )
     parser.add_argument(
         "--suicidal",
         action="store_true",
-        help="Enable Suicidal event (player may take their own life)"
+        help="Enable Suicidal event (player may take their own life)",
     )
     parser.add_argument(
         "--drunk",
         action="store_true",
-        help="Enable Drunk event (player's vote goes to random target)"
+        help="Enable Drunk event (player's vote goes to random target)",
     )
     parser.add_argument(
-        "--jester",
-        action="store_true",
-        help="Enable Jester event (player wins by getting lynched)"
+        "--jester", action="store_true", help="Enable Jester event (player wins by getting lynched)"
     )
     parser.add_argument(
-        "--priest",
-        action="store_true",
-        help="Enable Priest event (can resurrect one dead player)"
+        "--priest", action="store_true", help="Enable Priest event (can resurrect one dead player)"
     )
     parser.add_argument(
-        "--lovers",
-        action="store_true",
-        help="Enable Lovers event (two players die if one dies)"
+        "--lovers", action="store_true", help="Enable Lovers event (two players die if one dies)"
     )
     parser.add_argument(
-        "--bodyguard",
-        action="store_true",
-        help="Enable Bodyguard event (dies protecting someone)"
+        "--bodyguard", action="store_true", help="Enable Bodyguard event (dies protecting someone)"
     )
     parser.add_argument(
-        "--chaos",
-        action="store_true",
-        help="CHAOS MODE - enable ALL events at once!"
+        "--chaos", action="store_true", help="CHAOS MODE - enable ALL events at once!"
     )
     parser.add_argument(
         "--delay",
         type=float,
         default=2.0,
-        help="Delay between game phases in seconds (default: 2.0)"
+        help="Delay between game phases in seconds (default: 2.0)",
     )
     parser.add_argument(
         "--players",
@@ -631,7 +664,7 @@ Examples:
         default=9,
         choices=range(5, 21),
         metavar="[5-20]",
-        help="Number of players in the game (default: 9)"
+        help="Number of players in the game (default: 9)",
     )
 
     args = parser.parse_args()
@@ -658,7 +691,7 @@ Examples:
             enable_priest=args.priest,
             enable_lovers=args.lovers,
             enable_bodyguard=args.bodyguard,
-            chaos_mode=args.chaos
+            chaos_mode=args.chaos,
         )
 
         # Run the game

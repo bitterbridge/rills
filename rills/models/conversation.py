@@ -2,7 +2,6 @@
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Optional
 from uuid import uuid4
 
 from .information import Visibility
@@ -20,13 +19,21 @@ class Statement:
     round_number: int
     phase: str  # "day_discussion", "assassin_discussion", "postgame", "feedback", etc.
     visibility: Visibility
-    in_response_to: Optional[str] = None  # Statement ID this is responding to
+    in_response_to: str | None = None  # Statement ID this is responding to
     metadata: dict = field(default_factory=dict)  # Additional context
 
     @classmethod
-    def create(cls, speaker: str, content: str, thinking: str,
-               round_number: int, phase: str, visibility: Visibility,
-               in_response_to: Optional[str] = None, **metadata) -> "Statement":
+    def create(
+        cls,
+        speaker: str,
+        content: str,
+        thinking: str,
+        round_number: int,
+        phase: str,
+        visibility: Visibility,
+        in_response_to: str | None = None,
+        **metadata,
+    ) -> "Statement":
         """Factory method to create Statement with auto-generated ID."""
         return cls(
             id=str(uuid4()),
@@ -38,7 +45,7 @@ class Statement:
             phase=phase,
             visibility=visibility,
             in_response_to=in_response_to,
-            metadata=metadata
+            metadata=metadata,
         )
 
     def __repr__(self) -> str:

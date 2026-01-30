@@ -1,13 +1,16 @@
 """Ghost event - dead players may haunt the living."""
 
-from typing import TYPE_CHECKING, Optional
 import random
+from typing import TYPE_CHECKING
+
+from ..models import PlayerModifier
 from .base import EventModifier
 
 if TYPE_CHECKING:
     from ..game import GameState
-    from ..player import Player
     from ..llm import LLMAgent
+    from ..player import Player
+    from ..services.effect_service import Effect
 
 
 class GhostEvent(EventModifier):
@@ -17,9 +20,9 @@ class GhostEvent(EventModifier):
     a ghost that can haunt a living player of their choice.
     """
 
-    def __init__(self, probability: float = 0.10):
+    def __init__(self, probability: float = 0.10) -> None:
         super().__init__(probability)
-        self._pending_ghost: Optional["Player"] = None
+        self._pending_ghost: Player | None = None
 
     @property
     def name(self) -> str:
@@ -33,23 +36,34 @@ class GhostEvent(EventModifier):
         """No special setup needed for ghost mode."""
         pass
 
-    def on_player_eliminated(
-        self,
-        game: "GameState",
-        player: "Player",
-        reason: str
-    ) -> None:
+    def on_player_eliminated(self, game: "GameState", player: "Player", reason: str) -> None:
         """10% chance for eliminated player to become a ghost."""
         if random.random() < 0.10:
-            player.is_ghost = True
+            player.is_ghost = True  # Old flag (backward compatibility)
+            player.add_modifier(
+                game, PlayerModifier(type="ghost", source="event:ghost")
+            )  # NEW: permanent modifier
             self._pending_ghost = player
             print(f"\n👻 {player.name}'s spirit rises as a ghost...")
 
-    def handle_ghost_choice(
-        self,
-        game: "GameState",
-        llm: "LLMAgent"
-    ) -> None:
+    def on_player_eliminated_effects(
+        self, game: "GameState", player: "Player", reason: str
+    ) -> list["Effect"]:
+        """Return ghost transformation effect (10% chance)."""
+        from ..services.effect_service import Effect
+
+        if random.random() < 0.10:
+            return [
+                Effect(
+                    type="become_ghost",
+                    target=player.name,
+                    source="ghost_event",
+                    data={"pending": True},
+                )
+            ]
+        return []
+
+    def handle_ghost_choice(self, game: "GameState", llm: "LLMAgent") -> None:
         """Let pending ghost choose who to haunt."""
         if not self._pending_ghost:
             return
@@ -67,10 +81,7 @@ class GhostEvent(EventModifier):
             )
 
             haunted_name, reasoning = llm.get_player_choice_with_reasoning(
-                player,
-                prompt,
-                [p.name for p in alive],
-                f"{player.name} choosing who to haunt"
+                player, prompt, [p.name for p in alive], f"{player.name} choosing who to haunt"
             )
 
             player.haunting_target = haunted_name

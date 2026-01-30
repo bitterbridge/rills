@@ -35,7 +35,13 @@ A Python implementation of the classic social deduction game Mafia (also known a
    pip install -e .
    ```
 
-4. **Set up your API key**:
+4. **Install development tools** (optional, for contributors):
+   ```bash
+   pip install -e ".[dev]"
+   pre-commit install
+   ```
+
+5. **Set up your API key**:
    - Copy `.env.example` to `.env`:
      ```bash
      cp .env.example .env
@@ -128,17 +134,36 @@ You can:
 rills/
 ├── rills/
 │   ├── __init__.py
-│   ├── game.py          # Game state and logic
-│   ├── player.py        # Player class with memory
-│   ├── roles.py         # Role definitions
-│   ├── llm.py          # LLM integration (Anthropic Claude)
-│   ├── phases.py       # Night and day phase logic
-│   └── main.py         # Main game loop and CLI
-├── play.py             # Entry point script
-├── pyproject.toml      # Project dependencies
-├── .env.example        # Example environment file
-└── README.md           # This file
+│   ├── game.py             # GameState - central game state
+│   ├── player.py           # Player dataclass
+│   ├── roles.py            # Role definitions
+│   ├── llm.py              # LLM integration (Anthropic Claude)
+│   ├── phases.py           # PhaseManager - orchestrates game flow
+│   ├── main.py             # Game creation and display
+│   ├── protocols.py        # Type protocols
+│   ├── types.py            # Type definitions
+│   ├── models/             # Data models (Information, PlayerState, etc.)
+│   ├── services/           # Service layer (InformationService, etc.)
+│   └── events/             # Event modifiers (Zombie, Ghost, etc.)
+├── tests/                  # Test suite
+├── play.py                 # Entry point script
+├── pyproject.toml          # Project dependencies
+├── ARCHITECTURE.md         # Architecture documentation
+├── REFACTORING_WAVE_2.md  # Refactoring plan
+├── .env.example            # Example environment file
+└── README.md               # This file
 ```
+
+## Architecture
+
+Rills uses a **service-oriented architecture** with clear separation of concerns:
+
+- **Services**: InformationService, ConversationService, VoteService, EffectService
+- **Models**: Structured data models for game state, player state, conversations, etc.
+- **Events**: Modular game mode extensions (Zombie, Ghost, Jester, etc.)
+- **PlayerModifier System**: Centralized state management for temporary/permanent effects
+
+For detailed architecture documentation, see [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## Development
 
@@ -183,6 +208,30 @@ Make a statement about what you think is happening...
 - API costs depend on game length (typically a few cents per game)
 - Players sometimes make surprising or irrational decisions - that's part of the fun!
 - The game can be interrupted with Ctrl+C
+
+## Development
+
+### Code Quality
+
+This project uses pre-commit hooks to maintain code quality:
+
+- **Black**: Code formatting
+- **Ruff**: Fast Python linter
+- **Mypy**: Type checking
+- **Bandit**: Security vulnerability scanning
+
+To set up:
+```bash
+pip install -e ".[dev]"
+pre-commit install
+```
+
+Run hooks manually:
+```bash
+pre-commit run --all-files
+```
+
+The hooks will automatically run on every commit to ensure code quality.
 
 ## Future Ideas
 

@@ -1,7 +1,9 @@
 """Gun Nut event - a player can fight back."""
 
-from typing import TYPE_CHECKING, Optional
 import random
+from typing import TYPE_CHECKING, Optional
+
+from ..models import PlayerModifier
 from .base import EventModifier
 
 if TYPE_CHECKING:
@@ -16,9 +18,9 @@ class GunNutEvent(EventModifier):
     there's a 50% chance a random assassin dies instead.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
-        self._pending_counter_attack: Optional["Player"] = None
+        self._pending_counter_attack: Player | None = None
 
     @property
     def name(self) -> str:
@@ -31,7 +33,8 @@ class GunNutEvent(EventModifier):
     def setup_game(self, game: "GameState") -> None:
         """Assign gun nut to a random non-suicidal villager."""
         available = [
-            p for p in game.players
+            p
+            for p in game.players
             if p.team == "village"
             and not p.suicidal
             and not p.is_sleepwalker
@@ -44,22 +47,17 @@ class GunNutEvent(EventModifier):
 
         if available:
             gun_nut = random.choice(available)
-            gun_nut.is_gun_nut = True
+            gun_nut.is_gun_nut = True  # Old flag (backward compatibility)
+            gun_nut.add_modifier(
+                game, PlayerModifier(type="gun_nut", source="event:gun_nut")
+            )  # NEW: permanent modifier
 
-    def on_player_eliminated(
-        self,
-        game: "GameState",
-        player: "Player",
-        reason: str
-    ) -> None:
+    def on_player_eliminated(self, game: "GameState", player: "Player", reason: str) -> None:
         """No special behavior - counter attack is handled in phases."""
         pass
 
     def check_counter_attack(
-        self,
-        game: "GameState",
-        target: "Player",
-        attacker: Optional["Player"] = None
+        self, game: "GameState", target: "Player", attacker: Optional["Player"] = None
     ) -> Optional["Player"]:
         """Check if gun nut fights back when targeted.
 

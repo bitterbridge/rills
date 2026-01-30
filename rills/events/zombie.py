@@ -1,14 +1,14 @@
 """Zombie event - dead zombies rise again."""
 
-from typing import TYPE_CHECKING, Optional
-import random
+from typing import TYPE_CHECKING
+
+from ..models import PlayerModifier
 from .base import EventModifier
 
 if TYPE_CHECKING:
     from ..game import GameState
-    from ..player import Player
-    from ..roles import Role
     from ..llm import LLMAgent
+    from ..player import Player
 
 
 class ZombieEvent(EventModifier):
@@ -19,10 +19,10 @@ class ZombieEvent(EventModifier):
     exponential spread.
     """
 
-    def __init__(self, probability: float = 0.10):
+    def __init__(self, probability: float = 0.10) -> None:
         super().__init__(probability)
-        self._active_zombies: list["Player"] = []  # Currently undead zombies
-        self._pending_rise: list["Player"] = []  # Will rise next night
+        self._active_zombies: list[Player] = []  # Currently undead zombies
+        self._pending_rise: list[Player] = []  # Will rise next night
 
     @property
     def name(self) -> str:
@@ -36,14 +36,11 @@ class ZombieEvent(EventModifier):
         """No special setup needed for zombie mode."""
         pass
 
-    def on_player_eliminated(
-        self,
-        game: "GameState",
-        player: "Player",
-        reason: str
-    ) -> None:
+    def on_player_eliminated(self, game: "GameState", player: "Player", reason: str) -> None:
         """When an infected player dies, they will rise as a zombie."""
-        if not player.is_zombie:
+        # Dual-check: old flag or new modifier
+        is_zombie = player.is_zombie or player.has_modifier(game, "zombie")
+        if not is_zombie:
             return
 
         # Mark them to rise as a zombie
@@ -63,17 +60,12 @@ class ZombieEvent(EventModifier):
 
         self._pending_rise.clear()
 
-    def handle_zombie_attacks(
-        self,
-        game: "GameState",
-        llm: "LLMAgent"
-    ) -> None:
+    def handle_zombie_attacks(self, game: "GameState", llm: "LLMAgent") -> None:
         """Let all active zombies attack (mostly random)."""
         for zombie in self._active_zombies:
             # Find potential victims (anyone alive who isn't already undead)
             potential_victims = [
-                p for p in game.get_alive_players()
-                if p not in self._active_zombies and p != zombie
+                p for p in game.get_alive_players() if p not in self._active_zombies and p != zombie
             ]
 
             if potential_victims:
@@ -89,7 +81,7 @@ class ZombieEvent(EventModifier):
                     zombie,
                     prompt,
                     [p.name for p in potential_victims],
-                    f"{zombie.name} choosing victim"
+                    f"{zombie.name} choosing victim",
                 )
 
                 victim = game.get_player_by_name(victim_name)
@@ -101,36 +93,39 @@ class ZombieEvent(EventModifier):
                     counter_killed = None
                     if game.event_registry:
                         from . import GunNutEvent
+
                         for event in game.event_registry.get_active_events():
                             if isinstance(event, GunNutEvent):
                                 counter_killed = event.check_counter_attack(game, victim, zombie)
                                 break
 
                     if counter_killed:
-                        print(f"💥 {victim.name} fought back! Zombie {counter_killed.name} was killed!")
-                        print(f"💀 {counter_killed.name} was a {counter_killed.role.value} (now a zombie)!")
+                        print(
+                            f"💥 {victim.name} fought back! Zombie {counter_killed.name} was killed!"
+                        )
+                        print(
+                            f"💀 {counter_killed.name} was a {counter_killed.role.value} (now a zombie)!"
+                        )
                         # Remove zombie from active zombies
                         if counter_killed in self._active_zombies:
                             self._active_zombies.remove(counter_killed)
                         game.eliminate_player(
                             counter_killed,
                             f"{victim.name} (Gun Nut) killed them in self-defense.",
-                            f"Zombie {counter_killed.name} was destroyed. They were {counter_killed.role.display_name()}."
+                            f"Zombie {counter_killed.name} was destroyed. They were {counter_killed.role.display_name()}.",
                         )
-                        # Gun Nut knows they killed a zombie
-                        victim.add_memory(f"You shot and killed zombie {counter_killed.name} who attacked you last night!")
-                        # Others know the zombie was destroyed
-                        for player in game.get_alive_players():
-                            if player != victim:
-                                player.add_memory(f"Zombie {counter_killed.name} was destroyed. They were {counter_killed.role.display_name()}.")
+                        # Note: Death information automatically tracked by InformationService
                     else:
                         # Mark victim as infected (they'll rise when they die)
-                        victim.is_zombie = True
+                        victim.is_zombie = True  # Old flag (backward compatibility)
+                        victim.add_modifier(
+                            game, PlayerModifier(type="zombie", source="event:zombie")
+                        )  # NEW: permanent modifier
 
                         # Kill the victim
                         print(f"💀 {victim.name} was {victim.role.display_name()}!")
                         game.eliminate_player(
                             victim,
                             f"They were killed by zombie {zombie.name}.",
-                            f"{victim.name} was found dead. They were {victim.role.display_name()}."
+                            f"{victim.name} was found dead. They were {victim.role.display_name()}.",
                         )

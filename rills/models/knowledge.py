@@ -1,9 +1,8 @@
 """Knowledge state models for tracking what players know."""
 
 from dataclasses import dataclass, field
-from typing import Optional
 
-from .information import InformationStore, InfoCategory
+from .information import InfoCategory, InformationStore
 
 
 @dataclass
@@ -25,9 +24,12 @@ class KnowledgeState:
         """Check if player has access to specific information."""
         return info_id in self.information_ids
 
-    def get_knowledge_summary(self, info_store: InformationStore,
-                              category: Optional[InfoCategory] = None,
-                              day_number: Optional[int] = None) -> str:
+    def get_knowledge_summary(
+        self,
+        info_store: InformationStore,
+        category: InfoCategory | None = None,
+        day_number: int | None = None,
+    ) -> str:
         """Get formatted summary of what this player knows."""
         # Get all information this player has access to
         all_info = []
@@ -49,7 +51,7 @@ class KnowledgeState:
 
         # Group by category if no category filter
         if category is None:
-            by_category = {}
+            by_category: dict[InfoCategory, list[str]] = {}
             for info in all_info:
                 if info.category not in by_category:
                     by_category[info.category] = []
@@ -67,7 +69,7 @@ class KnowledgeState:
             items = [f"  - {info.content}" for info in all_info]
             return "\n".join(items)
 
-    def get_info_count(self, category: Optional[InfoCategory] = None) -> int:
+    def get_info_count(self, category: InfoCategory | None = None) -> int:
         """Count how many pieces of information this player knows."""
         if category is None:
             return len(self.information_ids)

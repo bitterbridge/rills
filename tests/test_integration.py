@@ -1,8 +1,6 @@
 """Integration tests for the game flow."""
 
-import pytest
 from rills.game import create_game
-from rills.roles import Role
 
 
 class TestGameIntegration:
@@ -104,17 +102,28 @@ class TestGameIntegration:
         alice = game.get_player_by_name("Alice")
         bob = game.get_player_by_name("Bob")
 
-        # Add some memories
-        alice.add_memory("I targeted Bob")
-        alice.add_memory("Bob seems suspicious of me")
+        # Test that information persists in InformationService
+        from rills.models import InfoCategory
 
-        assert len(alice.memories) == 2
+        game.info_service.reveal_to_player(
+            alice.name, "I targeted Bob", category=InfoCategory.ACTION, day=1
+        )
+        game.info_service.reveal_to_player(
+            alice.name, "Bob seems suspicious of me", category=InfoCategory.STATEMENT, day=1
+        )
 
-        # Bob gets eliminated, Alice should remember
+        alice_context = game.info_service.build_context_for(alice.name)
+        assert "I targeted Bob" in alice_context
+        assert "Bob seems suspicious of me" in alice_context
+
+        # Bob gets eliminated, Alice should have access to the death information
         game.eliminate_player(bob, "Killed", "Bob was eliminated")
-        # Check for new death message format
-        assert "Bob died. They were a Villager" in alice.memories[-1]
-        assert len(alice.memories) == 3
+
+        # Check InformationService has the death record visible to Alice
+        alice_context_after = game.info_service.build_context_for(alice.name)
+        assert "Bob died" in alice_context_after
+        # Check for Bob's actual role (may be randomized by create_game)
+        assert bob.role.display_name() in alice_context_after
 
     def test_special_mode_flags(self):
         """Test that special event modes can be enabled."""
@@ -126,7 +135,7 @@ class TestGameIntegration:
         game = create_game(configs, enable_zombie=True, enable_ghost=True)
 
         # Game should have event registry
-        assert hasattr(game, 'event_registry')
+        assert hasattr(game, "event_registry")
         assert game.event_registry is not None
 
         # Registry should have registered events

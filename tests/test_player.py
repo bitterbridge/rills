@@ -1,6 +1,5 @@
 """Tests for Player class."""
 
-import pytest
 from rills.player import Player
 from rills.roles import Role
 
@@ -25,31 +24,11 @@ class TestPlayer:
         assert assassin.is_assassin() is True
         assert villager.is_assassin() is False
 
-    def test_player_add_memory(self):
-        """Test adding memories to a player."""
-        player = Player(name="Alice", role=Role.ASSASSINS, personality="Cunning")
-        assert len(player.memories) == 0
-
-        player.add_memory("I saw Bob acting suspicious")
-        assert len(player.memories) == 1
-        assert player.memories[0] == "I saw Bob acting suspicious"
-
     def test_zombie_player_initialization(self):
         """Test that zombie players are marked correctly."""
         zombie = Player(name="Zed", role=Role.ZOMBIE, personality="Quiet")
         assert zombie.is_zombie is True
         assert zombie.team == "village"
-
-    def test_player_get_context(self):
-        """Test context generation for LLM."""
-        player = Player(name="Alice", role=Role.ASSASSINS, personality="Cunning")
-        player.add_memory("Night 1: We targeted Bob")
-
-        context = player.get_context(phase="Night 1", visible_info={})
-        assert "Alice" in context
-        assert "Cunning" in context
-        assert "Assassins" in context
-        assert "Night 1: We targeted Bob" in context
 
     def test_special_role_flags(self):
         """Test special role flags."""

@@ -1,18 +1,14 @@
 """Information service for managing information flow and revelation."""
 
-from typing import Optional
 from datetime import datetime
 
-from rills.models import (
-    Information, Visibility, InfoCategory, InformationStore,
-    KnowledgeState
-)
+from rills.models import InfoCategory, Information, InformationStore, KnowledgeState, Visibility
 
 
 class InformationService:
     """Manages information flow and revelation to players."""
 
-    def __init__(self, store: Optional[InformationStore] = None):
+    def __init__(self, store: InformationStore | None = None):
         self.store = store or InformationStore()
         self.knowledge: dict[str, KnowledgeState] = {}
 
@@ -36,7 +32,7 @@ class InformationService:
             category=InfoCategory.DEATH,
             visibility=Visibility("public", []),
             day_number=day,
-            cause=cause
+            cause=cause,
         )
         info_id = self.store.add(info)
 
@@ -53,7 +49,7 @@ class InformationService:
             source="game",
             category=InfoCategory.ROLE_REVEAL,
             visibility=Visibility("private", to_players),
-            day_number=day
+            day_number=day,
         )
         info_id = self.store.add(info)
 
@@ -64,8 +60,9 @@ class InformationService:
 
         return info_id
 
-    def reveal_to_player(self, player_name: str, content: str,
-                        category: InfoCategory, day: int, **metadata) -> str:
+    def reveal_to_player(
+        self, player_name: str, content: str, category: InfoCategory, day: int, **metadata
+    ) -> str:
         """Reveal private information to a specific player."""
         info = Information.create(
             content=content,
@@ -73,7 +70,7 @@ class InformationService:
             category=category,
             visibility=Visibility("private", [player_name]),
             day_number=day,
-            **metadata
+            **metadata,
         )
         info_id = self.store.add(info)
 
@@ -82,9 +79,15 @@ class InformationService:
 
         return info_id
 
-    def reveal_to_team(self, team: str, content: str,
-                       category: InfoCategory, day: int,
-                       team_members: list[str], **metadata) -> str:
+    def reveal_to_team(
+        self,
+        team: str,
+        content: str,
+        category: InfoCategory,
+        day: int,
+        team_members: list[str],
+        **metadata,
+    ) -> str:
         """Reveal information to all members of a team."""
         info = Information.create(
             content=content,
@@ -92,7 +95,7 @@ class InformationService:
             category=category,
             visibility=Visibility("team", [team]),
             day_number=day,
-            **metadata
+            **metadata,
         )
         info_id = self.store.add(info)
 
@@ -103,8 +106,9 @@ class InformationService:
 
         return info_id
 
-    def reveal_to_all(self, content: str, category: InfoCategory,
-                      day: int, source: str = "game", **metadata) -> str:
+    def reveal_to_all(
+        self, content: str, category: InfoCategory, day: int, source: str = "game", **metadata
+    ) -> str:
         """Reveal public information to all players."""
         info = Information.create(
             content=content,
@@ -112,7 +116,7 @@ class InformationService:
             category=category,
             visibility=Visibility("public", []),
             day_number=day,
-            **metadata
+            **metadata,
         )
         info_id = self.store.add(info)
 
@@ -122,10 +126,13 @@ class InformationService:
 
         return info_id
 
-    def build_context_for(self, player_name: str,
-                         category: Optional[InfoCategory] = None,
-                         day_number: Optional[int] = None,
-                         since: Optional[datetime] = None) -> str:
+    def build_context_for(
+        self,
+        player_name: str,
+        category: InfoCategory | None = None,
+        day_number: int | None = None,
+        since: datetime | None = None,
+    ) -> str:
         """Build context string for LLM prompt from player's knowledge."""
         if player_name not in self.knowledge:
             return ""
@@ -158,21 +165,18 @@ class InformationService:
         # Format as context
         return "\n".join(info.content for info in all_info)
 
-    def get_knowledge_summary(self, player_name: str,
-                             category: Optional[InfoCategory] = None) -> str:
+    def get_knowledge_summary(self, player_name: str, category: InfoCategory | None = None) -> str:
         """Get formatted knowledge summary for a player."""
         if player_name not in self.knowledge:
             return "No information available."
 
-        return self.knowledge[player_name].get_knowledge_summary(
-            self.store, category=category
-        )
+        return self.knowledge[player_name].get_knowledge_summary(self.store, category=category)
 
-    def get_public_info(self, day_number: Optional[int] = None) -> list[Information]:
+    def get_public_info(self, day_number: int | None = None) -> list[Information]:
         """Get all public information, optionally filtered by day."""
         return self.store.query(
-            visible_to="anyone",  # Will match public visibility
-            day_number=day_number
+            visible_to="anyone",
+            day_number=day_number,  # Will match public visibility
         )
 
     def clear(self):

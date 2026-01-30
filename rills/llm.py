@@ -1,7 +1,7 @@
 """LLM integration for character decision-making."""
 
 import os
-from typing import Optional, Literal
+
 from anthropic import Anthropic
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
@@ -11,20 +11,24 @@ from .player import Player
 
 class PlayerChoice(BaseModel):
     """Schema for player choice with reasoning."""
+
     reasoning: str = Field(description="1-2 sentence explanation of the reasoning")
     choice: str = Field(description="The exact choice from the available options")
 
 
 class PlayerStatement(BaseModel):
     """Schema for player free-form statement with internal thinking."""
-    thinking: str = Field(description="Internal deliberation/reasoning (1-2 sentences) - visible only in transcript")
+
+    thinking: str = Field(
+        description="Internal deliberation/reasoning (1-2 sentences) - visible only in transcript"
+    )
     statement: str = Field(description="The public statement to other players")
 
 
 class LLMAgent:
     """Handles LLM API calls for character decisions."""
 
-    def __init__(self, api_key: Optional[str] = None, model: str = "claude-sonnet-4-5-20250929"):
+    def __init__(self, api_key: str | None = None, model: str = "claude-sonnet-4-5-20250929"):
         """Initialize the LLM agent."""
         load_dotenv()
         self.api_key = api_key or os.getenv("ANTHROPIC_API_KEY")
@@ -35,11 +39,7 @@ class LLMAgent:
         self.model = model
 
     def get_player_choice(
-        self,
-        player: Player,
-        prompt: str,
-        valid_choices: list[str],
-        context: str = ""
+        self, player: Player, prompt: str, valid_choices: list[str], context: str = ""
     ) -> str:
         """
         Get a decision from a player using the LLM with structured output.
@@ -53,10 +53,7 @@ class LLMAgent:
         Returns:
             The player's choice (one of valid_choices)
         """
-        system_message = player.get_context(
-            phase=context or "game",
-            visible_info={}
-        )
+        system_message = player.get_context(phase=context or "game", visible_info={})
 
         choices_str = "\n".join([f"- {choice}" for choice in valid_choices])
 
@@ -77,11 +74,11 @@ Choose exactly one option from the list above."""
                     "choice": {
                         "type": "string",
                         "description": "The exact choice from the available options",
-                        "enum": valid_choices
+                        "enum": valid_choices,
                     }
                 },
-                "required": ["choice"]
-            }
+                "required": ["choice"],
+            },
         }
 
         try:
@@ -92,9 +89,7 @@ Choose exactly one option from the list above."""
                 system=system_message,
                 tools=[tool_schema],
                 tool_choice={"type": "tool", "name": "make_choice"},
-                messages=[
-                    {"role": "user", "content": user_message}
-                ]
+                messages=[{"role": "user", "content": user_message}],
             )
 
             # Extract choice from tool use
@@ -121,21 +116,14 @@ Choose exactly one option from the list above."""
             return valid_choices[0]
 
     def get_player_choice_with_reasoning(
-        self,
-        player: Player,
-        prompt: str,
-        valid_choices: list[str],
-        context: str = ""
+        self, player: Player, prompt: str, valid_choices: list[str], context: str = ""
     ) -> tuple[str, str]:
         """Get a decision with reasoning from a player using structured output.
 
         Returns:
             Tuple of (choice, reasoning)
         """
-        system_message = player.get_context(
-            phase=context or "game",
-            visible_info={}
-        )
+        system_message = player.get_context(phase=context or "game", visible_info={})
 
         choices_str = "\n".join([f"- {choice}" for choice in valid_choices])
 
@@ -155,16 +143,16 @@ Explain your reasoning (1-2 sentences) and make your choice."""
                 "properties": {
                     "reasoning": {
                         "type": "string",
-                        "description": "1-2 sentence explanation of the reasoning behind the choice"
+                        "description": "1-2 sentence explanation of the reasoning behind the choice",
                     },
                     "choice": {
                         "type": "string",
                         "description": "The exact choice from the available options",
-                        "enum": valid_choices
-                    }
+                        "enum": valid_choices,
+                    },
                 },
-                "required": ["reasoning", "choice"]
-            }
+                "required": ["reasoning", "choice"],
+            },
         }
 
         try:
@@ -175,9 +163,7 @@ Explain your reasoning (1-2 sentences) and make your choice."""
                 system=system_message,
                 tools=[tool_schema],
                 tool_choice={"type": "tool", "name": "make_choice_with_reasoning"},
-                messages=[
-                    {"role": "user", "content": user_message}
-                ]
+                messages=[{"role": "user", "content": user_message}],
             )
 
             # Extract choice and reasoning from tool use
@@ -216,11 +202,7 @@ Explain your reasoning (1-2 sentences) and make your choice."""
             return valid_choices[0], f"Error: {e}"
 
     def get_player_statement(
-        self,
-        player: Player,
-        prompt: str,
-        context: str = "",
-        max_tokens: int = 300
+        self, player: Player, prompt: str, context: str = "", max_tokens: int = 300
     ) -> tuple[str, str]:
         """
         Get a free-form statement from a player using two-step structured output.
@@ -236,10 +218,7 @@ Explain your reasoning (1-2 sentences) and make your choice."""
             Tuple of (thinking, statement) where thinking is internal deliberation
             and statement is the public message
         """
-        system_message = player.get_context(
-            phase=context or "game",
-            visible_info={}
-        )
+        system_message = player.get_context(phase=context or "game", visible_info={})
 
         # Step 1: Get thinking/reasoning
         thinking_schema = {
@@ -250,11 +229,11 @@ Explain your reasoning (1-2 sentences) and make your choice."""
                 "properties": {
                     "thinking": {
                         "type": "string",
-                        "description": "Your internal deliberation and reasoning (1-2 sentences) - what you're actually thinking privately"
+                        "description": "Your internal deliberation and reasoning (1-2 sentences) - what you're actually thinking privately",
                     }
                 },
-                "required": ["thinking"]
-            }
+                "required": ["thinking"],
+            },
         }
 
         try:
@@ -267,8 +246,11 @@ Explain your reasoning (1-2 sentences) and make your choice."""
                 tools=[thinking_schema],
                 tool_choice={"type": "tool", "name": "internal_thinking"},
                 messages=[
-                    {"role": "user", "content": f"{prompt}\n\nFirst, what are you thinking privately about this situation?"}
-                ]
+                    {
+                        "role": "user",
+                        "content": f"{prompt}\n\nFirst, what are you thinking privately about this situation?",
+                    }
+                ],
             )
 
             thinking = "No thoughts"
@@ -286,11 +268,11 @@ Explain your reasoning (1-2 sentences) and make your choice."""
                     "properties": {
                         "statement": {
                             "type": "string",
-                            "description": "Your public statement to other players - what you actually say out loud (1-3 sentences)"
+                            "description": "Your public statement to other players - what you actually say out loud (1-3 sentences)",
                         }
                     },
-                    "required": ["statement"]
-                }
+                    "required": ["statement"],
+                },
             }
 
             statement_response = self.client.messages.create(
@@ -301,8 +283,11 @@ Explain your reasoning (1-2 sentences) and make your choice."""
                 tools=[statement_schema],
                 tool_choice={"type": "tool", "name": "public_statement"},
                 messages=[
-                    {"role": "user", "content": f"{prompt}\n\nYou were thinking: {thinking}\n\nNow, what do you say out loud to the other players?"}
-                ]
+                    {
+                        "role": "user",
+                        "content": f"{prompt}\n\nYou were thinking: {thinking}\n\nNow, what do you say out loud to the other players?",
+                    }
+                ],
             )
 
             statement = f"{player.name} remains silent."
@@ -316,5 +301,6 @@ Explain your reasoning (1-2 sentences) and make your choice."""
         except Exception as e:
             print(f"Error getting statement from LLM for {player.name}: {e}")
             import traceback
+
             traceback.print_exc()
             return "Error occurred", f"{player.name} remains silent."

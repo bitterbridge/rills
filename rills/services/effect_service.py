@@ -1,10 +1,10 @@
 """Effect service for applying game state changes."""
 
-from dataclasses import dataclass
-from typing import Any, Optional
 from copy import deepcopy
+from dataclasses import dataclass
+from typing import Any
 
-from rills.models import PlayerState, PlayerModifier
+from rills.models import PlayerModifier, PlayerState
 
 
 @dataclass
@@ -23,7 +23,9 @@ class Effect:
 class EffectService:
     """Applies effects to game state."""
 
-    def apply(self, effect: Effect, player_states: dict[str, PlayerState]) -> dict[str, PlayerState]:
+    def apply(
+        self, effect: Effect, player_states: dict[str, PlayerState]
+    ) -> dict[str, PlayerState]:
         """
         Apply an effect to player states.
 
@@ -52,15 +54,18 @@ class EffectService:
         else:
             raise ValueError(f"Unknown effect type: {effect.type}")
 
-    def apply_batch(self, effects: list[Effect],
-                   player_states: dict[str, PlayerState]) -> dict[str, PlayerState]:
+    def apply_batch(
+        self, effects: list[Effect], player_states: dict[str, PlayerState]
+    ) -> dict[str, PlayerState]:
         """Apply multiple effects in sequence."""
         current_states = player_states
         for effect in effects:
             current_states = self.apply(effect, current_states)
         return current_states
 
-    def _add_modifier(self, effect: Effect, states: dict[str, PlayerState]) -> dict[str, PlayerState]:
+    def _add_modifier(
+        self, effect: Effect, states: dict[str, PlayerState]
+    ) -> dict[str, PlayerState]:
         """Add a modifier to a player."""
         if effect.target not in states:
             return states
@@ -72,13 +77,15 @@ class EffectService:
             active=True,
             data=effect.data.get("modifier_data", {}),
             expires_on=effect.data.get("expires_on"),
-            applied_on=effect.data.get("applied_on", 0)
+            applied_on=effect.data.get("applied_on", 0),
         )
         player.add_modifier(modifier)
 
         return states
 
-    def _remove_modifier(self, effect: Effect, states: dict[str, PlayerState]) -> dict[str, PlayerState]:
+    def _remove_modifier(
+        self, effect: Effect, states: dict[str, PlayerState]
+    ) -> dict[str, PlayerState]:
         """Remove a modifier from a player."""
         if effect.target not in states:
             return states
@@ -90,7 +97,9 @@ class EffectService:
 
         return states
 
-    def _kill_player(self, effect: Effect, states: dict[str, PlayerState]) -> dict[str, PlayerState]:
+    def _kill_player(
+        self, effect: Effect, states: dict[str, PlayerState]
+    ) -> dict[str, PlayerState]:
         """Kill a player."""
         if effect.target not in states:
             return states
@@ -104,13 +113,15 @@ class EffectService:
             source=effect.source,
             active=True,
             data={"cause": effect.data.get("cause", "unknown")},
-            applied_on=effect.data.get("day", 0)
+            applied_on=effect.data.get("day", 0),
         )
         player.add_modifier(death_modifier)
 
         return states
 
-    def _revive_player(self, effect: Effect, states: dict[str, PlayerState]) -> dict[str, PlayerState]:
+    def _revive_player(
+        self, effect: Effect, states: dict[str, PlayerState]
+    ) -> dict[str, PlayerState]:
         """Revive a player."""
         if effect.target not in states:
             return states
@@ -121,7 +132,9 @@ class EffectService:
 
         return states
 
-    def _change_role(self, effect: Effect, states: dict[str, PlayerState]) -> dict[str, PlayerState]:
+    def _change_role(
+        self, effect: Effect, states: dict[str, PlayerState]
+    ) -> dict[str, PlayerState]:
         """Change a player's role."""
         if effect.target not in states:
             return states
@@ -133,7 +146,9 @@ class EffectService:
 
         return states
 
-    def _change_team(self, effect: Effect, states: dict[str, PlayerState]) -> dict[str, PlayerState]:
+    def _change_team(
+        self, effect: Effect, states: dict[str, PlayerState]
+    ) -> dict[str, PlayerState]:
         """Change a player's team."""
         if effect.target not in states:
             return states
@@ -146,10 +161,14 @@ class EffectService:
         return states
 
     @staticmethod
-    def create_modifier_effect(target: str, modifier_type: str, source: str,
-                              expires_on: Optional[int] = None,
-                              applied_on: int = 0,
-                              modifier_data: Optional[dict] = None) -> Effect:
+    def create_modifier_effect(
+        target: str,
+        modifier_type: str,
+        source: str,
+        expires_on: int | None = None,
+        applied_on: int = 0,
+        modifier_data: dict | None = None,
+    ) -> Effect:
         """Factory method to create a modifier effect."""
         return Effect(
             type="add_modifier",
@@ -159,26 +178,18 @@ class EffectService:
                 "modifier_type": modifier_type,
                 "expires_on": expires_on,
                 "applied_on": applied_on,
-                "modifier_data": modifier_data or {}
-            }
+                "modifier_data": modifier_data or {},
+            },
         )
 
     @staticmethod
     def create_death_effect(target: str, source: str, cause: str, day: int) -> Effect:
         """Factory method to create a death effect."""
         return Effect(
-            type="kill_player",
-            target=target,
-            source=source,
-            data={"cause": cause, "day": day}
+            type="kill_player", target=target, source=source, data={"cause": cause, "day": day}
         )
 
     @staticmethod
     def create_role_change_effect(target: str, new_role: str, source: str) -> Effect:
         """Factory method to create a role change effect."""
-        return Effect(
-            type="change_role",
-            target=target,
-            source=source,
-            data={"new_role": new_role}
-        )
+        return Effect(type="change_role", target=target, source=source, data={"new_role": new_role})

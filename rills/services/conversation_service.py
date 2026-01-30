@@ -1,12 +1,10 @@
 """Conversation service for managing discussion rounds and speaking order."""
 
 import random
-from typing import Optional, Callable
+from collections.abc import Callable
+from typing import Any
 
-from rills.models import (
-    Statement, ConversationRound, ConversationHistory,
-    Visibility
-)
+from rills.models import ConversationHistory, ConversationRound, Statement, Visibility
 
 
 class ConversationService:
@@ -15,7 +13,7 @@ class ConversationService:
     def __init__(self):
         self.history = ConversationHistory()
 
-    def get_speaking_order(self, players: list[any]) -> list[any]:
+    def get_speaking_order(self, players: list[Any]) -> list[Any]:
         """
         Get personality-weighted speaking order.
 
@@ -23,20 +21,42 @@ class ConversationService:
         reserved personalities speak later, with randomization.
         """
         assertive_keywords = {
-            "aggressive", "bold", "charismatic", "cunning", "manipulative",
-            "assertive", "confident", "dominant", "outspoken", "brash",
-            "fearless", "daring", "provocative", "confrontational"
+            "aggressive",
+            "bold",
+            "charismatic",
+            "cunning",
+            "manipulative",
+            "assertive",
+            "confident",
+            "dominant",
+            "outspoken",
+            "brash",
+            "fearless",
+            "daring",
+            "provocative",
+            "confrontational",
         }
 
         reserved_keywords = {
-            "quiet", "timid", "cautious", "nervous", "anxious",
-            "reserved", "shy", "hesitant", "withdrawn", "meek",
-            "passive", "introverted", "subtle", "humble"
+            "quiet",
+            "timid",
+            "cautious",
+            "nervous",
+            "anxious",
+            "reserved",
+            "shy",
+            "hesitant",
+            "withdrawn",
+            "meek",
+            "passive",
+            "introverted",
+            "subtle",
+            "humble",
         }
 
         def calculate_initiative(player) -> float:
             """Calculate initiative score for speaking order."""
-            personality = getattr(player, 'personality', '').lower()
+            personality = getattr(player, "personality", "").lower()
 
             # Start with random base
             score = random.random()
@@ -58,13 +78,15 @@ class ConversationService:
         sorted_players = sorted(players, key=calculate_initiative, reverse=True)
         return sorted_players
 
-    def conduct_round(self,
-                     participants: list[any],
-                     phase: str,
-                     round_number: int,
-                     day_number: int,
-                     get_statement_func: Callable,
-                     visibility: Optional[Visibility] = None) -> ConversationRound:
+    def conduct_round(
+        self,
+        participants: list[Any],
+        phase: str,
+        round_number: int,
+        day_number: int,
+        get_statement_func: Callable,
+        visibility: Visibility | None = None,
+    ) -> ConversationRound:
         """
         Conduct a round of conversation.
 
@@ -88,7 +110,7 @@ class ConversationService:
             round_number=round_number,
             phase=phase,
             day_number=day_number,
-            speaking_order=[p.name for p in speaking_order]
+            speaking_order=[p.name for p in speaking_order],
         )
 
         for player in speaking_order:
@@ -105,7 +127,7 @@ class ConversationService:
                 thinking=thinking,
                 round_number=round_number,
                 phase=phase,
-                visibility=visibility
+                visibility=visibility,
             )
 
             round_obj.add_statement(stmt)
@@ -120,19 +142,54 @@ class ConversationService:
         statements = self.history.get_statements_by(player_name)
         return statements[-count:] if statements else []
 
-    def get_statements_in_phase(self, phase: str, day_number: Optional[int] = None) -> list[Statement]:
+    def get_visible_statements_in_phase(
+        self,
+        player_name: str,
+        phase: str,
+        player_team: str | None = None,
+        day_number: int | None = None,
+        exclude_self: bool = True,
+    ) -> list[Statement]:
+        """Get statements visible to a player in a specific phase.
+
+        Args:
+            player_name: Name of the player viewing the statements
+            phase: Phase to get statements from (e.g., "day_discussion")
+            player_team: Player's team (needed for team visibility)
+            day_number: Optional day number filter
+            exclude_self: Whether to exclude the player's own statements
+
+        Returns:
+            List of statements the player can see
+        """
+        statements = self.get_statements_in_phase(phase, day_number)
+
+        visible_statements = []
+        for stmt in statements:
+            # Skip own statements if requested
+            if exclude_self and stmt.speaker == player_name:
+                continue
+
+            # Check visibility
+            if stmt.visibility.is_visible_to(player_name, player_team=player_team):
+                visible_statements.append(stmt)
+
+        return visible_statements
+
+    def get_statements_in_phase(self, phase: str, day_number: int | None = None) -> list[Statement]:
         """Get all statements from a specific phase."""
         statements = self.history.get_statements_in_phase(phase)
         if day_number is not None:
-            statements = [s for s in statements if s.metadata.get('day_number') == day_number]
+            statements = [s for s in statements if s.metadata.get("day_number") == day_number]
         return statements
 
     def search_mentions(self, keyword: str) -> list[Statement]:
         """Search for statements mentioning a keyword."""
         return self.history.search_content(keyword)
 
-    def format_round_for_display(self, round_obj: ConversationRound,
-                                 show_thinking: bool = False) -> str:
+    def format_round_for_display(
+        self, round_obj: ConversationRound, show_thinking: bool = False
+    ) -> str:
         """Format a conversation round for display."""
         lines = []
         lines.append(f"\n=== {round_obj.phase.upper()} - Round {round_obj.round_number} ===\n")

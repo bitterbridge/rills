@@ -60,7 +60,7 @@ ROLE_DESCRIPTIONS = {
     Role.MAD_SCIENTIST: {
         "name": "Mad Scientist",
         "team": "village",
-        "description": "You are the Mad Scientist. Each night, you choose ONE player to inject with an experimental serum. However, the serum's effect is RANDOM - you don't know what it will do! Possible effects: zombie infection, love potion, confusion/drunkenness, insomnia, sleepwalking, or suicidal thoughts. Choose your test subject wisely!",
+        "description": "You are the Mad Scientist working to develop a TRUTH SERUM to help the village. Each night, you inject ONE player with your experimental formula. You have a small chance (~15%) of successfully creating the truth serum, which will force the target to reveal their true role during the next day's discussion. However, most experiments fail and cause random chaotic effects instead (zombie infection, love potion, confusion, insomnia, sleepwalking, or dark thoughts). Choose your test subjects strategically!",
         "night_action": True,
     },
     Role.ZOMBIE: {

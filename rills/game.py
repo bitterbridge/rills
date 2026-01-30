@@ -26,6 +26,10 @@ class GameState:
     events: list[str] = field(default_factory=list)
     event_registry: Optional["EventRegistry"] = None
 
+    # Town blackboard - anonymous messages anyone can post at night
+    # Insomniacs can see who posted each message
+    blackboard_messages: list[dict[str, str]] = field(default_factory=list)
+
     # Player state management - NEW in Phase 5
     player_states: dict[str, PlayerState] = field(default_factory=dict)
 
@@ -120,10 +124,10 @@ class GameState:
             self.events.append("The village has won! All Assassins have been eliminated.")
             return True
 
-        if alive_assassins >= alive_village:
+        if alive_assassins > alive_village:
             self.game_over = True
             self.winner = "assassins"
-            self.events.append("The Assassins have won! They equal or outnumber the villagers.")
+            self.events.append("The Assassins have won! They outnumber the villagers.")
             return True
 
         return False

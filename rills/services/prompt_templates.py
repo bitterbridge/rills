@@ -112,11 +112,29 @@ LYNCH_VOTE_PROMPT: Final[
 ] = """
 It's time to vote for who to eliminate today.
 
+⚠️  CRITICAL VOTING GUIDANCE:
+- DO NOT vote for someone just because they're "quiet" or "haven't spoken yet"
+- Look for CONCRETE EVIDENCE: contradictions, suspicious voting patterns, defensive behavior
+- Consider: Who has claimed roles? Do their claims match observed events?
+- Think strategically: Who benefits from recent deaths and votes?
+- Remember: Eliminating innocent villagers helps the Assassins win!
+
+WHAT MAKES SOMEONE SUSPICIOUS:
+✓ Contradicting known facts or previous statements
+✓ Coordinated voting patterns with others
+✓ Overly defensive or deflecting when questioned
+✓ Role claims that don't match observed events
+
+WHAT DOES NOT MAKE SOMEONE SUSPICIOUS:
+✗ Being quiet (they may not have had a turn to speak yet!)
+✗ Asking questions or being confused
+✗ Not having a power role to claim
+
 {discussion_summary}
 
 {context}
 
-Who do you vote to eliminate?
+Who do you vote to eliminate? Base your decision on EVIDENCE, not assumptions.
 """
 
 # System context templates

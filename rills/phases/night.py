@@ -54,6 +54,10 @@ class NightPhaseHandler:
         # ==== COLLECT ALL NIGHT ACTIONS ====
         night_result = NightResult()
 
+        # Town Blackboard - anyone can post anonymously
+        print(h4("Town Blackboard"))
+        self._blackboard_posting(game)
+
         # Assassins section
         print(h4("Assassins"))
         night_result.assassin_target = self._assassins_action(game)
@@ -159,7 +163,7 @@ class NightPhaseHandler:
 
                 # Add feedback for assassins
                 for assassin in [p for p in game.get_alive_players() if p.is_assassin()]:
-                    assassin.action_feedback = f"You successfully eliminated {result.assassin_target.name}. They were a {result.assassin_target.role.display_name()}."
+                    assassin.action_feedback = f"You successfully eliminated {result.assassin_target.name}. They were {result.assassin_target.role.display_name()}."
 
         # Resolve vigilante kill
         if result.vigilante_target:
@@ -221,7 +225,7 @@ class NightPhaseHandler:
 
                 # Add feedback for vigilante
                 if vigilante:
-                    vigilante.action_feedback = f"You successfully eliminated {result.vigilante_target.name}. They were a {result.vigilante_target.role.display_name()}."
+                    vigilante.action_feedback = f"You successfully eliminated {result.vigilante_target.name}. They were {result.vigilante_target.role.display_name()}."
 
         # Add feedback for doctor
         if result.doctor_target:
@@ -281,6 +285,8 @@ class NightPhaseHandler:
         # Assassin discussion phase
         if len(assassins_members) > 1:
             print(h5("Discussion"))
+            print("👥 ASSASSIN COMMUNICATION: You can coordinate privately at night.")
+            print("   Only Assassins can see this discussion.\n")
 
             def get_assassin_statement(assassin, context, _round_num):
                 teammates = [m.name for m in assassins_members if m.name != assassin.name]
@@ -288,13 +294,23 @@ class NightPhaseHandler:
 
                 prompt = f"""{teammate_info}
 
-It's nighttime. Discuss with your team who you think should be eliminated tonight.
-Consider:
-- Who is the biggest threat to the Assassins?
-- Who might be the Doctor, Detective, or Vigilante?
-- What's your team's strategy?
+🔪 ASSASSIN STRATEGIC PLANNING:
 
-Share your thoughts with your fellow Assassins (1-2 sentences)."""
+It's nighttime - coordinate with your team!
+
+PRIORITY TARGETS:
+- Detective (they can expose you!)
+- Doctor (they can save your targets)
+- Vigilante (they can eliminate you)
+- Vocal villagers who are building cases against Assassins
+
+STRATEGIC CONSIDERATIONS:
+- Who has been most effective at organizing the village?
+- Who might have special roles based on their behavior?
+- Who do you want to eliminate tonight?
+- Coordinate your voting and daytime strategy
+
+Share your thoughts with your team (1-2 sentences)."""
 
                 if context:
                     prompt += f"\n\nWhat your teammates have said:\n{context}"
@@ -327,6 +343,7 @@ Share your thoughts with your fellow Assassins (1-2 sentences)."""
 
         # Voting
         print(h5("Voting"))
+        print("🗳️ Each Assassin votes - majority wins\n")
         votes = {}
         for assassin in assassins_members:
             target_names = [p.name for p in non_assassins]
@@ -337,11 +354,20 @@ Share your thoughts with your fellow Assassins (1-2 sentences)."""
                 targets=target_names,
                 team_members=teammates,
             )
+
+            # Add voting guidance
+            guidance = """\n\n🎯 TARGET SELECTION:
+- Eliminate the biggest threats first (Detective, Doctor, Vigilante)
+- Target vocal villagers who organize others
+- Avoid targeting quiet players (wastes your kill)
+- Consider your team's discussion above
+"""
+
             system_context = game.context_builder.build_system_context(assassin, "night")
 
             choice, reasoning = self.llm.get_player_choice_with_reasoning(
                 player=assassin,
-                prompt=f"Who should the Assassins eliminate tonight?\n\n{prompt}",
+                prompt=f"Who should the Assassins eliminate tonight?\n\n{prompt}{guidance}",
                 valid_choices=target_names,
                 context=system_context,
             )
@@ -381,11 +407,21 @@ Share your thoughts with your fellow Assassins (1-2 sentences)."""
             targets=target_names,
             last_protected=doctor.last_protected,
         )
+
+        # Add strategic guidance for Doctor role
+        guidance = """\n\n🏥 DOCTOR GUIDANCE:
+- Protect players you think are most valuable to the village
+- Consider protecting those who made strong accusations against suspicious players
+- Don't protect the same person twice in a row (it's not allowed)
+- Think about who the Assassins might target based on recent events
+- Protecting someone who spoke up during the day can help them continue investigating
+"""
+
         system_context = game.context_builder.build_system_context(doctor, "night")
 
         choice, reasoning = self.llm.get_player_choice_with_reasoning(
             player=doctor,
-            prompt=prompt,
+            prompt=prompt + guidance,
             valid_choices=target_names,
             context=system_context,
         )
@@ -423,11 +459,21 @@ Share your thoughts with your fellow Assassins (1-2 sentences)."""
         target_names = [p.name for p in other_players]
 
         prompt = game.context_builder.build_for_investigation(detective, targets=target_names)
+
+        # Add strategic guidance for Detective role
+        guidance = """\n\n🔍 DETECTIVE GUIDANCE:
+- Investigate players whose behavior seems suspicious or defensive
+- Check people who've been deflecting blame onto others
+- Verify role claims (if someone claims Villager, investigate to confirm)
+- Investigate those who voted inconsistently or against village interests
+- Use your investigation to gather concrete evidence, not just suspicions
+"""
+
         system_context = game.context_builder.build_system_context(detective, "night")
 
         choice, reasoning = self.llm.get_player_choice_with_reasoning(
             player=detective,
-            prompt=prompt,
+            prompt=prompt + guidance,
             valid_choices=target_names,
             context=system_context,
         )
@@ -435,7 +481,7 @@ Share your thoughts with your fellow Assassins (1-2 sentences)."""
         target = game.get_player_by_name(choice)
         if target:
             is_assassin = target.is_assassin()
-            result = "IS an Assassin" if is_assassin else "is NOT an Assassin"
+            result = "ARE an Assassin" if is_assassin else "are NOT an Assassin"
             print(f"  💭 {detective.name} thinks: {reasoning}")
             print(f"  🔍 {detective.name} investigates {choice}")
 
@@ -470,11 +516,22 @@ Share your thoughts with your fellow Assassins (1-2 sentences)."""
         target_names = ["Skip (don't kill anyone tonight)"] + [p.name for p in other_players]
 
         prompt = game.context_builder.build_for_vigilante_action(vigilante, choices=target_names)
+
+        # Add strategic guidance for Vigilante role
+        guidance = """\n\n⚔️ VIGILANTE GUIDANCE:
+- You can only kill ONCE per game - use it wisely!
+- Only act if you have STRONG EVIDENCE someone is an Assassin
+- Killing an innocent villager wastes your ability and helps the Assassins
+- Consider waiting if you're uncertain - you can always act on a future night
+- Listen to Detective investigations and trust concrete evidence
+- Think carefully: is the risk worth it?
+"""
+
         system_context = game.context_builder.build_system_context(vigilante, "night")
 
         choice, reasoning = self.llm.get_player_choice_with_reasoning(
             player=vigilante,
-            prompt=prompt,
+            prompt=prompt + guidance,
             valid_choices=target_names,
             context=system_context,
         )
@@ -493,6 +550,89 @@ Share your thoughts with your fellow Assassins (1-2 sentences)."""
             vigilante.add_modifier(game, PlayerModifier(type="vigilante_used", source="vigilante"))
 
         return target
+
+    def _blackboard_posting(self, game: GameState) -> None:
+        """Allow players to post anonymous messages to the town blackboard at night.
+
+        Insomniacs can see who posted each message.
+        """
+        import random
+
+        from ..formatting import h5
+
+        alive_players = game.get_alive_players()
+
+        # Shuffle to randomize posting order
+        posting_players = random.sample(alive_players, len(alive_players))
+
+        # Track who posts for insomniacs
+        night_posters = []
+
+        print(h5("Anonymous Messages"))
+        print("📋 Players can post anonymous messages to the town blackboard...\n")
+
+        for player in posting_players:
+            # Each player has a chance to post (or can choose to post)
+            prompt = """It's nighttime. You can post an ANONYMOUS message to the town blackboard that everyone will see tomorrow.
+
+Strategic uses:
+- Share suspicions without revealing who you are
+- Mislead the village if you're an Assassin
+- Drop hints about your investigation results
+- Build trust or sow discord
+
+Your message will be completely anonymous. Choose wisely:
+- "SKIP" to not post anything
+- Or write a brief message (1-2 sentences)
+
+What do you want to post?"""
+
+            system_context = game.context_builder.build_system_context(player, "night")
+
+            try:
+                response = self.llm.llm.messages.create(
+                    model=self.llm.model,
+                    max_tokens=150,
+                    temperature=0.8,
+                    system=system_context,
+                    messages=[{"role": "user", "content": prompt}],
+                )
+
+                message = response.content[0].text.strip()
+
+                # Post message if they didn't skip
+                if message and message.upper() != "SKIP" and not message.startswith("SKIP"):
+                    game.blackboard_messages.append(
+                        {
+                            "author": player.name,  # Hidden from most players
+                            "content": message,
+                            "day": game.day_number,
+                        },
+                    )
+                    night_posters.append(player.name)
+                    print(f"  📝 Anonymous: {message}")
+
+            except Exception:
+                # If posting fails, just skip
+                continue
+
+        # Insomniacs observe who posted
+        insomniacs = [p for p in alive_players if p.has_modifier(game, "insomniac")]
+        if insomniacs and night_posters:
+            print("\n  ☕ Insomniacs noticed activity...")
+            for insomniac in insomniacs:
+                # Insomniac sees who was active posting
+                if night_posters:
+                    sighting = f"You saw {', '.join(night_posters)} posting to the blackboard"
+                    insomniac.insomniac_sighting = sighting
+                    print(f"  👁️ {insomniac.name} saw: {sighting}")
+
+        if not game.blackboard_messages or all(
+            msg.get("day") != game.day_number for msg in game.blackboard_messages
+        ):
+            print("  (No messages posted tonight)")
+
+        print()
 
     def _mad_scientist_action(self, game: GameState) -> None:
         """Mad Scientist chooses a target and injects them with a random effect."""
@@ -514,28 +654,41 @@ Share your thoughts with your fellow Assassins (1-2 sentences)."""
         target_names = [p.name for p in other_players]
         recent_events = game.info_service.build_context_for(scientist.name)
 
-        prompt = f"""You are conducting a scientific experiment. Choose ONE person to inject with your experimental serum.
+        prompt = f"""You are working to develop a TRUTH SERUM to help identify the Assassins!
 
-You DON'T know what effect it will have - it could help them, harm them, or cause bizarre side effects!
+Each night, you must inject ONE person with your experimental formula. You have a small chance of successfully creating the truth serum, which will force them to reveal their true role during tomorrow's discussion. However, most experiments produce chaotic side effects instead.
+
+🧪 MAD SCIENTIST GUIDANCE:
+- Your goal is to help the VILLAGE by exposing Assassins with truth serum
+- Target suspicious players who might be Assassins (exposing them helps village)
+- You have a 15% chance of success (truth serum) each night
+- 85% of the time you'll cause random chaos effects instead
+- Keep trying different targets to maximize your chances
+- Think strategically: who would be most valuable to expose?
+
+STRATEGIC CONSIDERATIONS:
+- Who might be an Assassin? (Truth serum would expose them!)
+- Who seems suspicious or has been acting strangely?
+- Who has been deflecting blame or voting suspiciously?
+- Balance your scientific curiosity with the village's needs
 
 Available test subjects: {", ".join(target_names)}
 
 {recent_events if recent_events else "No recent events."}
 
-Choose your test subject and explain your reasoning (be eccentric and scientific!)."""
+Choose your test subject and explain your scientific reasoning!"""
 
         mad_guidance = """
 
 ⚗️ IMPORTANT - MAD SCIENTIST MINDSET:
-You are ECCENTRIC and your reasoning should reflect this! Your thought process can be:
-- Based on pseudoscience ("Their aura is too orange...")
-- Obsessed with the SCIENCE of it ("For the advancement of knowledge!")
-- Bizarrely logical ("They sneezed twice, clearly a perfect test subject")
-- Pattern-seeking in chaos ("Their name has 5 letters, the golden ratio!")
-- Enthusiastically manic about experimentation
-- Completely ignoring social consequences in favor of "data collection"
+You are an ECCENTRIC SCIENTIST pursuing the truth serum! Your reasoning should be:
+- Scientifically curious ("Their behavioral patterns suggest deception!")
+- Strategically chaotic ("Must test on suspicious subjects for SCIENCE!")
+- Enthusiastically manic about the breakthrough ("This could be THE ONE!")
+- Somewhat village-aligned (you want to find Assassins) but still weird about it
+- Obsessed with experimentation while claiming it helps the village
 
-Be weird, be enthusiastic, be MAD. Science waits for no one!
+Be eccentric, be strategic, be MAD. For SCIENCE and the village!
 """
 
         system_context = (
@@ -556,26 +709,53 @@ Be weird, be enthusiastic, be MAD. Science waits for no one!
         print(f"  💭 {scientist.name} thinks: {reasoning}")
         print(f"  🎯 {scientist.name} chooses to inject: {target.name}")
 
-        # Random effect
-        effects = [
-            ("zombie", "💉 Zombie Infection", "infected with the zombie virus"),
-            ("love", "💘 Love Potion", "injected with a love potion"),
-            ("drunk", "🍺 Confusion Serum", "injected with a confusion serum"),
-            ("insomniac", "☕ Insomnia Inducer", "injected with an insomnia-inducing serum"),
-            ("sleepwalker", "🌙 Sleepwalker Serum", "injected with a sleepwalking serum"),
-            ("suicidal", "💀 Depression Serum", "injected with a serum causing dark thoughts"),
-        ]
+        # 15% chance of truth serum, otherwise random chaotic effect
+        truth_serum_chance = 0.15
+        if random.random() < truth_serum_chance:
+            # SUCCESS! Truth serum discovered
+            effect_type = "truth_serum"
+            print("  ✨ BREAKTHROUGH! The truth serum works!")
+            print(f"  💉 {scientist.name} injects {target.name} with the truth serum!")
 
-        effect_type, effect_name, description = random.choice(effects)
+            # Add truth serum modifier to target
+            target.add_modifier(
+                game,
+                PlayerModifier(
+                    type="truth_serum",
+                    source="mad_scientist",
+                    expires_on=game.day_number + 1,
+                    data={"scientist": scientist.name},
+                ),
+            )
 
-        print(f"  🎲 Random effect selected: {effect_name}")
-        print(f"  💉 {scientist.name} injects {target.name}!")
+            # Inform the scientist
+            scientist.action_feedback = f"🎉 BREAKTHROUGH! You successfully created the truth serum and injected {target.name}! They will be compelled to reveal their true role during discussions today."
 
-        # Store feedback for the scientist
-        scientist.action_feedback = f"You injected {target.name} with your experimental serum! The subject was {description}. You'll see the results during the day..."
+            # The target will be forced to reveal their role (handled in day phase discussion)
+            print(f"  🧪 {target.name} will be compelled to tell the truth about their role...")
+        else:
+            # Random chaotic effect
+            effects = [
+                ("zombie", "💉 Zombie Infection", "infected with the zombie virus"),
+                ("love", "💘 Love Potion", "injected with a love potion"),
+                ("drunk", "🍺 Confusion Serum", "injected with a confusion serum"),
+                ("insomniac", "☕ Insomnia Inducer", "injected with an insomnia-inducing serum"),
+                ("sleepwalker", "🌙 Sleepwalker Serum", "injected with a sleepwalking serum"),
+                ("suicidal", "💀 Depression Serum", "injected with a serum causing dark thoughts"),
+            ]
+
+            effect_type, effect_name, description = random.choice(effects)
+
+            print(f"  🎲 Random effect selected: {effect_name}")
+            print(f"  💉 {scientist.name} injects {target.name}!")
+
+            # Store feedback for the scientist
+            scientist.action_feedback = f"You injected {target.name} with your experimental serum! They were {description}. Still searching for the truth serum formula..."
 
         # Apply the effect
-        if effect_type == "zombie":
+        if effect_type == "truth_serum":
+            pass  # Already handled above
+        elif effect_type == "zombie":
             target.pending_zombification = True
             target.add_modifier(
                 game,

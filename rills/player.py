@@ -47,6 +47,7 @@ class Player:
     last_assassin_statement: str | None = None  # Backwards compatibility
     postgame_statement: str | None = None  # Backwards compatibility
     action_feedback: str | None = None  # Feedback message about last night action
+    notes: str = ""  # Strategic scratchpad for tracking suspicions, patterns, predictions
 
     def __post_init__(self) -> None:
         """Initialize player with role information."""

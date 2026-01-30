@@ -57,6 +57,10 @@ class DayPhaseHandler:
         print(h4("Events"))
         day_result.eliminated = self._process_lynch_result(game, vote_result)
 
+        # ==== UPDATE NOTES ====
+        # Allow players to update their strategic notes after observing the day's events
+        self._update_player_notes(game, alive_players, day_result)
+
         # ==== SUMMARY ====
         print(h4("Summary"))
         self._display_night_summary(game)
@@ -72,16 +76,49 @@ class DayPhaseHandler:
             night_deaths: List of player names who died
 
         """
+        # Display game progress
+        alive_players = game.get_alive_players()
+        alive_count = len(alive_players)
+        print(f"📊 Day {game.day_number} | {alive_count} players remaining\n")
+
+        # Display town blackboard if there are messages
+        if game.blackboard_messages:
+            print("📋 Town Blackboard (anonymous messages):")
+            for msg in game.blackboard_messages[-5:]:  # Show last 5 messages
+                print(f"  📝 {msg['content']}")
+            print()
+
+        # Display structured recent history
+        if game.day_number > 1:
+            print("📜 Recent Events Summary:")
+            # Get eliminated players in reverse order (most recent first)
+            dead_players = [p for p in game.players if not p.alive]
+            recent_deaths = dead_players[-4:] if len(dead_players) > 4 else dead_players
+
+            if recent_deaths:
+                for dead in reversed(recent_deaths):
+                    elimination_reason = "unknown"
+                    # Try to determine how they died from game events
+                    if any("lynched" in str(e).lower() or "voted" in str(e).lower() for e in game.events):
+                        if dead.role.value in ["Assassins"]:
+                            elimination_reason = "eliminated by village vote"
+                        else:
+                            elimination_reason = "eliminated by village vote"
+                    elif any("assassin" in str(e).lower() for e in game.events):
+                        elimination_reason = "killed during the night"
+                    print(f"  • {dead.name} ({dead.role.display_name()}) - {elimination_reason}")
+                print()
+
         # Display deaths
         if night_deaths:
+            print("☠️  Night Deaths:")
             for name in night_deaths:
-                print(f"{name} has been found dead.")
+                print(f"  • {name} has been found dead.")
             print()
         else:
-            print("No one died during the night.\n")
+            print("✅ No one died during the night.\n")
 
         # Display action feedback for each player
-        alive_players = game.get_alive_players()
         has_feedback = False
         for player in alive_players:
             if player.action_feedback:
@@ -92,6 +129,24 @@ class DayPhaseHandler:
 
         if has_feedback:
             print()
+
+        # Display truth serum effects
+        truth_serum_victims = [p for p in alive_players if p.has_modifier(game, "truth_serum")]
+        if truth_serum_victims:
+            for victim in truth_serum_victims:
+                print(f"🧪 {victim.name} is under the effect of the TRUTH SERUM! They must reveal their true role during discussion.")
+            print()
+
+        # Display strategic guidance
+        assassin_count = len([p for p in alive_players if p.team == "assassins"])
+        village_count = len([p for p in alive_players if p.team == "village"])
+
+        print("ℹ️  Strategic Information:")
+        print(f"  • Started with: {len([p for p in game.players if p.team == 'village'])} villagers, {len([p for p in game.players if p.team == 'assassins'])} assassins")
+        print(f"  • Currently alive: {alive_count} players total")
+        print(f"  • Remember: Eliminating quiet players without evidence is often a mistake!")
+        print(f"  • Look for: Voting patterns, defensive behavior, claims that contradict events")
+        print()
 
     def _display_night_summary(self, game: GameState) -> None:
         """Display summary of alive players and their roles/statuses."""
@@ -120,6 +175,66 @@ class DayPhaseHandler:
             role_str = " + ".join(role_info)
             print(f"  • {player.name} ({role_str})")
         print()
+
+    def _update_player_notes(
+        self,
+        game: GameState,
+        alive_players: list[Player],
+        day_result,
+    ) -> None:
+        """Allow players to update their strategic notes after the day's events."""
+        for player in alive_players:
+            # Build context about what happened today
+            discussion_summary = ""
+            if day_result.discussion_rounds:
+                recent_round = day_result.discussion_rounds[-1]
+                statements = [f"- {s.speaker}: {s.content}" for s in recent_round.statements[-5:]]
+                discussion_summary = "\n".join(statements)
+
+            eliminated_info = ""
+            if day_result.eliminated:
+                eliminated_info = f"\n{day_result.eliminated.name} ({day_result.eliminated.role.display_name()}) was eliminated."
+
+            prompt = f"""Update your strategic notes based on today's events.
+
+Today's discussion highlights:
+{discussion_summary}
+{eliminated_info}
+
+Your current notes:
+{player.notes if player.notes else "(No notes yet)"}
+
+Update your notes to track:
+- Suspicious behavior or voting patterns you noticed
+- Role claims (who claimed what, does it match events?)
+- Predictions (who might be Assassin, who to trust)
+- Contradictions or defensive behavior
+- Plans for tomorrow (who to investigate, protect, or vote for)
+
+Keep notes concise but useful for future reference. Write updated notes (or "KEEP" to keep current notes unchanged):"""
+
+            system_context = game.context_builder.build_system_context(player, "day")
+
+            # Get updated notes from player
+            try:
+                response = self.llm.llm.messages.create(
+                    model=self.llm.model,
+                    max_tokens=200,
+                    temperature=0.7,
+                    system=system_context,
+                    messages=[{"role": "user", "content": prompt}],
+                )
+
+                new_notes = response.content[0].text.strip()
+
+                # Update notes if they provided new ones
+                if new_notes and new_notes.upper() != "KEEP":
+                    player.notes = new_notes
+
+            except Exception as e:
+                # If note-taking fails, just skip it - not critical
+                print(f"  (Note update skipped for {player.name})")
+                continue
 
     def _conduct_discussion_rounds(
         self,
@@ -173,6 +288,11 @@ class DayPhaseHandler:
         from ..formatting import h5
 
         print(h5("Votes"))
+        print("📋 VOTING PROCESS:")
+        print("   • Each player votes for ONE person to eliminate (or can ABSTAIN)")
+        print("   • The player with the MOST votes is eliminated")
+        print("   • In case of a TIE, NO ONE is eliminated")
+        print("   • Think carefully - vote based on EVIDENCE, not suspicion alone\n")
         votes = self._conduct_vote(game, alive_players)
 
         if not votes:
@@ -214,14 +334,15 @@ class DayPhaseHandler:
 
             print()
 
-            # Check for ties
+            # Check for ties with explicit tie-breaking rules
             most_common = vote_counts.most_common()
             if len(most_common) > 1 and most_common[0][1] == most_common[1][1]:
                 print(h5("Lynch"))
-                print("⚖️  The vote ended in a tie! No one was lynched.")
-                print(
-                    "ℹ️  When votes tie, no one is eliminated - the town must reach a clear majority.\n",
-                )
+                tied_players = [name for name, count in most_common if count == most_common[0][1]]
+                print(f"⚖️  TIE: {', '.join(tied_players)} all received {most_common[0][1]} votes")
+                print("\n🔔 TIE-BREAKING RULE: When there's a tie, NO ONE is eliminated.")
+                print("   The village must reach consensus or risk another night.")
+                print("   Ties protect the uncertain but allow Assassins to strike again.\n")
                 return None
             else:
                 eliminated_name, vote_count = most_common[0]
@@ -260,6 +381,33 @@ class DayPhaseHandler:
         """Get a player's statement during discussion."""
         alive_names = [p.name for p in game.get_alive_players() if p != player]
 
+        # Check if player is under truth serum effect
+        if player.has_modifier(game, "truth_serum"):
+            # Force them to reveal their true role
+            role_name = player.role.display_name()
+            team = player.team
+
+            prompt = f"""You have been injected with a TRUTH SERUM by the Mad Scientist!
+
+You are COMPELLED to reveal your true role. You cannot lie or deflect.
+
+You must state clearly: "I am {role_name}" and explain what your role does.
+
+Be honest and direct - the serum forces the truth from you."""
+
+            system_context = game.context_builder.build_system_context(player, "day")
+
+            # Add truth compulsion to context
+            system_context += f"\n\nCRITICAL: You are under a TRUTH SERUM effect. You MUST reveal that you are a {role_name} on the {team} team. You cannot lie, deflect, or be vague. State clearly 'I am {role_name}' in your statement."
+
+            return self.llm.get_player_statement(
+                player=player,
+                prompt=prompt,
+                context=system_context,
+                max_tokens=100,
+            )
+
+        # Normal discussion
         # Get visible statements for this player
         recent_statements = game.conversation_service.get_visible_statements_in_phase(
             player_name=player.name,
@@ -272,18 +420,36 @@ class DayPhaseHandler:
             for stmt in recent_statements:
                 context_str += f"- {stmt.speaker}: {stmt.content}\n"
 
+        # Get game state for strategic context
+        alive_count = len(game.get_alive_players())
+        dead_players = [p for p in game.players if not p.alive]
+
+        # Include player's notes if they have any
+        notes_context = ""
+        if player.notes:
+            notes_context = f"\n\nYour previous notes:\n{player.notes}\n"
+
         prompt = f"""It's daytime. Share your thoughts about who might be an Assassin.
 
-Consider:
-- Who has been acting suspiciously?
-- What have people said during discussions?
-- Who should the town vote to eliminate?
+STRATEGIC GUIDANCE:
+- Don't eliminate quiet players just for being quiet - they may not have had a turn yet!
+- Look for CONCRETE EVIDENCE: voting patterns, contradictions, defensive behavior
+- Consider who has claimed roles and whether their claims match observed events
+- Think about who benefited from night kills or votes
+
+WHAT TO ANALYZE:
+- Who has been actively deflecting suspicion onto others?
+- Whose voting patterns seem coordinated with others?
+- Who has made claims that contradict known information?
+- Who has been overly defensive or aggressive without cause?
 
 Other alive players: {", ".join(alive_names)}
+Players eliminated so far: {len(dead_players)}
+Current game state: Day {game.day_number}, {alive_count} players remaining
 
-{context_str}
+{context_str}{notes_context}
 
-Share your thoughts (1-2 sentences)."""
+Share your strategic analysis (1-2 sentences focused on EVIDENCE, not gut feelings)."""
 
         system_context = game.context_builder.build_system_context(player, "day")
 
@@ -337,9 +503,15 @@ What do you whisper to {haunted_player.name}? (1 sentence, be eerie and cryptic)
             )
             system_context = game.context_builder.build_system_context(player, "day")
 
-            guidance = """\nConsider:
-- Who seems most suspicious?
-- Who might be an Assassin?
+            # Include player's notes in voting context
+            notes_reminder = ""
+            if player.notes:
+                notes_reminder = f"\n\nYour notes:\n{player.notes}\n"
+
+            guidance = f"""{notes_reminder}
+Consider:
+- Who seems most suspicious based on EVIDENCE?
+- Who might be an Assassin based on your observations?
 - What strategy helps your team win?
 - You can choose to ABSTAIN if you're uncertain
 

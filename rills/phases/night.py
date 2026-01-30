@@ -590,7 +590,8 @@ What do you want to post?"""
             system_context = game.context_builder.build_system_context(player, "night")
 
             try:
-                response = self.llm.llm.messages.create(
+                # Use the llm client directly
+                response = self.llm.client.messages.create(
                     model=self.llm.model,
                     max_tokens=150,
                     temperature=0.8,
@@ -598,7 +599,10 @@ What do you want to post?"""
                     messages=[{"role": "user", "content": prompt}],
                 )
 
-                message = response.content[0].text.strip()
+                # Extract text from response, handling different content types
+                content = response.content[0]
+                message = content.text if hasattr(content, "text") else ""
+                message = message.strip()
 
                 # Post message if they didn't skip
                 if message and message.upper() != "SKIP" and not message.startswith("SKIP"):
@@ -606,15 +610,15 @@ What do you want to post?"""
                         {
                             "author": player.name,  # Hidden from most players
                             "content": message,
-                            "day": game.day_number,
+                            "day": str(game.day_number),  # Convert to str for dict consistency
                         },
                     )
                     night_posters.append(player.name)
                     print(f"  📝 Anonymous: {message}")
 
-            except Exception:
-                # If posting fails, just skip
-                continue
+            except Exception as e:
+                # If posting fails, log it but continue with other players
+                print(f"  (Posting failed for one player: {e!s})")
 
         # Insomniacs observe who posted
         insomniacs = [p for p in alive_players if p.has_modifier(game, "insomniac")]
@@ -628,7 +632,7 @@ What do you want to post?"""
                     print(f"  👁️ {insomniac.name} saw: {sighting}")
 
         if not game.blackboard_messages or all(
-            msg.get("day") != game.day_number for msg in game.blackboard_messages
+            msg.get("day") != str(game.day_number) for msg in game.blackboard_messages
         ):
             print("  (No messages posted tonight)")
 

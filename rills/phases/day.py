@@ -99,7 +99,10 @@ class DayPhaseHandler:
                 for dead in reversed(recent_deaths):
                     elimination_reason = "unknown"
                     # Try to determine how they died from game events
-                    if any("lynched" in str(e).lower() or "voted" in str(e).lower() for e in game.events):
+                    if any(
+                        "lynched" in str(e).lower() or "voted" in str(e).lower()
+                        for e in game.events
+                    ):
                         if dead.role.value in ["Assassins"]:
                             elimination_reason = "eliminated by village vote"
                         else:
@@ -134,18 +137,20 @@ class DayPhaseHandler:
         truth_serum_victims = [p for p in alive_players if p.has_modifier(game, "truth_serum")]
         if truth_serum_victims:
             for victim in truth_serum_victims:
-                print(f"🧪 {victim.name} is under the effect of the TRUTH SERUM! They must reveal their true role during discussion.")
+                print(
+                    f"🧪 {victim.name} is under the effect of the TRUTH SERUM! They must reveal their true role during discussion.",
+                )
             print()
 
         # Display strategic guidance
-        assassin_count = len([p for p in alive_players if p.team == "assassins"])
-        village_count = len([p for p in alive_players if p.team == "village"])
 
         print("ℹ️  Strategic Information:")
-        print(f"  • Started with: {len([p for p in game.players if p.team == 'village'])} villagers, {len([p for p in game.players if p.team == 'assassins'])} assassins")
+        print(
+            f"  • Started with: {len([p for p in game.players if p.team == 'village'])} villagers, {len([p for p in game.players if p.team == 'assassins'])} assassins",
+        )
         print(f"  • Currently alive: {alive_count} players total")
-        print(f"  • Remember: Eliminating quiet players without evidence is often a mistake!")
-        print(f"  • Look for: Voting patterns, defensive behavior, claims that contradict events")
+        print("  • Remember: Eliminating quiet players without evidence is often a mistake!")
+        print("  • Look for: Voting patterns, defensive behavior, claims that contradict events")
         print()
 
     def _display_night_summary(self, game: GameState) -> None:
@@ -217,7 +222,7 @@ Keep notes concise but useful for future reference. Write updated notes (or "KEE
 
             # Get updated notes from player
             try:
-                response = self.llm.llm.messages.create(
+                response = self.llm.client.messages.create(
                     model=self.llm.model,
                     max_tokens=200,
                     temperature=0.7,
@@ -225,16 +230,18 @@ Keep notes concise but useful for future reference. Write updated notes (or "KEE
                     messages=[{"role": "user", "content": prompt}],
                 )
 
-                new_notes = response.content[0].text.strip()
+                # Extract text from response, handling different content types
+                content = response.content[0]
+                new_notes = content.text if hasattr(content, "text") else ""
+                new_notes = new_notes.strip()
 
                 # Update notes if they provided new ones
                 if new_notes and new_notes.upper() != "KEEP":
                     player.notes = new_notes
 
-            except Exception as e:
+            except Exception:
                 # If note-taking fails, just skip it - not critical
                 print(f"  (Note update skipped for {player.name})")
-                continue
 
     def _conduct_discussion_rounds(
         self,

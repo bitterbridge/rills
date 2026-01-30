@@ -38,12 +38,12 @@ class SleepwalkerEvent(EventModifier):
             sleepwalker = random.choice(available)
             sleepwalker.is_sleepwalker = True  # Old flag (backward compatibility)
             sleepwalker.add_modifier(
-                game, PlayerModifier(type="sleepwalker", source="event:sleepwalker")
+                game,
+                PlayerModifier(type="sleepwalker", source="event:sleepwalker"),
             )  # NEW: permanent modifier
 
     def on_player_eliminated(self, game: "GameState", player: "Player", reason: str) -> None:
         """No special behavior on elimination."""
-        pass
 
     def on_night_start(self, game: "GameState") -> None:
         """Announce sleepwalker movement."""

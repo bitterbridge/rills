@@ -56,20 +56,25 @@ class DrunkEvent(EventModifier):
 
     def on_player_eliminated(self, game: "GameState", player: "Player", reason: str) -> None:
         """No special behavior on elimination."""
-        pass
 
     def redirect_vote(
-        self, voter: "Player", intended_target: str, all_players: list["Player"]
+        self,
+        voter: "Player",
+        intended_target: str,
+        all_players: list["Player"],
     ) -> str:
         """Redirect a drunk player's vote to a random target.
 
         Args:
+        ----
             voter: The player voting
             intended_target: Who they tried to vote for
             all_players: All alive players to choose from
 
         Returns:
+        -------
             The actual target (random if drunk, original otherwise)
+
         """
         # Check if drunk (old flag only for now, since redirect_vote isn't used yet)
         if not hasattr(voter, "is_drunk") or not voter.is_drunk:
@@ -93,10 +98,13 @@ class DrunkEvent(EventModifier):
         """Get message if a vote was redirected.
 
         Args:
+        ----
             voter_name: Name of the voter
 
         Returns:
+        -------
             Message if vote was redirected, None otherwise
+
         """
         if voter_name in self._vote_redirect:
             return f"🍺 {voter_name}'s vote went astray..."

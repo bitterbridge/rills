@@ -14,17 +14,17 @@ from .suicidal import SuicidalEvent
 from .zombie import ZombieEvent
 
 __all__ = [
+    "BodyguardEvent",
+    "DrunkEvent",
     "EventModifier",
     "EventRegistry",
-    "ZombieEvent",
     "GhostEvent",
-    "SleepwalkerEvent",
-    "InsomniacEvent",
     "GunNutEvent",
-    "SuicidalEvent",
-    "DrunkEvent",
+    "InsomniacEvent",
     "JesterEvent",
-    "PriestEvent",
     "LoversEvent",
-    "BodyguardEvent",
+    "PriestEvent",
+    "SleepwalkerEvent",
+    "SuicidalEvent",
+    "ZombieEvent",
 ]

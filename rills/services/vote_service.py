@@ -22,10 +22,10 @@ class VoteService:
         get_vote_func: Callable,
         modifiers: dict[str, list] | None = None,
     ) -> VoteResult:
-        """
-        Conduct a voting round.
+        """Conduct a voting round.
 
         Args:
+        ----
             voters: List of player objects who can vote
             candidates: List of player objects who can be voted for
             day: Current day number
@@ -35,7 +35,9 @@ class VoteService:
             modifiers: Optional dict of player_name -> [PlayerModifier] for vote redirects
 
         Returns:
+        -------
             VoteResult object
+
         """
         votes = []
         candidate_names = [c.name for c in candidates]
@@ -90,8 +92,7 @@ class VoteService:
         return self.history.get_targeting_pattern(target)
 
     def analyze_voting_alignment(self, player1: str, player2: str) -> float:
-        """
-        Analyze voting alignment between two players.
+        """Analyze voting alignment between two players.
 
         Returns a score from 0.0 (never aligned) to 1.0 (always aligned).
         """

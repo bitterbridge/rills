@@ -8,6 +8,7 @@ from .models.player_state import PlayerModifier, PlayerState
 from .player import Player
 from .roles import Role
 from .services import ContextBuilder, ConversationService, InformationService, VoteService
+from .services.effect_service import Effect
 
 if TYPE_CHECKING:
     from .events import EventRegistry
@@ -31,12 +32,13 @@ class GameState:
     # Service layer - initialized in __post_init__
     info_service: InformationService = field(default_factory=InformationService, init=False)
     conversation_service: ConversationService = field(
-        default_factory=ConversationService, init=False
+        default_factory=ConversationService,
+        init=False,
     )
     vote_service: VoteService = field(default_factory=VoteService, init=False)
-    context_builder: ContextBuilder = field(default=None, init=False)
+    context_builder: ContextBuilder = field(init=False)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Initialize services and register players."""
         # Initialize context builder with info service
         self.context_builder = ContextBuilder(self.info_service)
@@ -48,7 +50,10 @@ class GameState:
         # Initialize PlayerState for each player - NEW in Phase 5
         for player in self.players:
             self.player_states[player.name] = PlayerState(
-                name=player.name, role=player.role.value, team=player.team, alive=player.alive
+                name=player.name,
+                role=player.role.value,
+                team=player.team,
+                alive=player.alive,
             )
 
     def get_alive_players(self) -> list[Player]:
@@ -67,14 +72,19 @@ class GameState:
         return None
 
     def eliminate_player(
-        self, player: Player, reason: str, public_reason: str | None = None
+        self,
+        player: Player,
+        reason: str,
+        public_reason: str | None = None,
     ) -> None:
         """Eliminate a player from the game.
 
         Args:
+        ----
             player: The player to eliminate
             reason: Full reason shown to humans
             public_reason: What players are told (defaults to role reveal)
+
         """
         player.alive = False
         # Human-visible event with full details
@@ -85,7 +95,7 @@ class GameState:
         if self.event_registry:
             effects = self.event_registry.on_player_eliminated(self, player, reason)
             # Apply effects from events
-            self._apply_event_effects(effects)
+            self.apply_event_effects(effects)
 
         # Use InformationService to reveal death with role
         self.info_service.reveal_death(
@@ -118,13 +128,14 @@ class GameState:
 
         return False
 
-    def _apply_event_effects(self, effects: list) -> None:
+    def apply_event_effects(self, effects: list[Effect]) -> None:
         """Apply effects from events to game state.
 
         Args:
+        ----
             effects: List of Effect objects to apply
-        """
 
+        """
         for effect in effects:
             if effect.type == "jester_victory":
                 # Handle jester victory
@@ -176,7 +187,8 @@ class GameState:
                 if target:
                     target.is_ghost = True  # Old flag (backward compatibility)
                     target.add_modifier(
-                        self, PlayerModifier(type="ghost", source="ghost_event")
+                        self,
+                        PlayerModifier(type="ghost", source="ghost_event"),
                     )  # NEW: permanent modifier
                     print(f"\n👻 {target.name}'s spirit rises as a ghost...")
                     # Store pending ghost in the event
@@ -185,7 +197,7 @@ class GameState:
 
                         for event in self.event_registry.get_active_events():
                             if isinstance(event, GhostEvent):
-                                event._pending_ghost = target
+                                event.pending_ghost = target
                                 break
             # Add more effect types as we migrate events
             # For now, other effects will be handled by effect_service for player states
@@ -207,7 +219,7 @@ class GameState:
 
 
 def create_game(
-    player_configs: list[dict],
+    player_configs: list[dict[str, str]],
     enable_zombie: bool = False,
     enable_ghost: bool = False,
     enable_sleepwalker: bool = False,
@@ -221,10 +233,10 @@ def create_game(
     enable_bodyguard: bool = False,
     chaos_mode: bool = False,
 ) -> GameState:
-    """
-    Create a new game with the specified players.
+    """Create a new game with the specified players.
 
     Args:
+    ----
         player_configs: List of dicts with 'name', 'role', and 'personality' keys
         enable_zombie: Enable zombie event
         enable_ghost: Enable ghost event
@@ -240,7 +252,9 @@ def create_game(
         chaos_mode: Enable all events (overrides individual flags)
 
     Returns:
+    -------
         GameState instance
+
     """
     from .events import (
         BodyguardEvent,
@@ -312,7 +326,7 @@ def create_game(
         registry.register(BodyguardEvent())
 
     # Activate all registered events (no random selection when manually specified)
-    for event in registry._events:
+    for event in registry.get_all_events():
         event.active = True
 
     # Create game state

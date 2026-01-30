@@ -34,12 +34,12 @@ class SuicidalEvent(EventModifier):
             suicidal = random.choice(villagers)
             suicidal.suicidal = True  # Old flag (backward compatibility)
             suicidal.add_modifier(
-                game, PlayerModifier(type="suicidal", source="event:suicidal")
+                game,
+                PlayerModifier(type="suicidal", source="event:suicidal"),
             )  # NEW: permanent modifier
 
     def on_player_eliminated(self, game: "GameState", player: "Player", reason: str) -> None:
         """No special behavior on elimination."""
-        pass
 
     def on_night_end(self, game: "GameState") -> None:
         """Check if suicidal player commits suicide (20% chance)."""
@@ -58,7 +58,9 @@ class SuicidalEvent(EventModifier):
             # Don't reveal it's a suicide - just another mysterious death
             print(f"☠️  {suicidal.name} was found dead!")
             game.eliminate_player(
-                suicidal, "They took their own life.", f"{suicidal.name} was found dead."
+                suicidal,
+                "They took their own life.",
+                f"{suicidal.name} was found dead.",
             )
 
     def on_night_end_effects(self, game: "GameState") -> list["Effect"]:
@@ -88,7 +90,7 @@ class SuicidalEvent(EventModifier):
                         "day": game.day_number,
                         "print_message": f"☠️  {suicidal.name} was found dead!",
                     },
-                )
+                ),
             ]
 
         return []

@@ -24,8 +24,10 @@ class NightPhaseHandler:
     def run_night_phase(self, game: GameState) -> list[str]:
         """Execute the night phase where special roles take actions.
 
-        Returns:
+        Returns
+        -------
             List of player names who died during the night
+
         """
         from ..formatting import h4
 
@@ -34,7 +36,7 @@ class NightPhaseHandler:
         # Notify events of night start
         if game.event_registry:
             effects = game.event_registry.on_night_start(game)
-            game._apply_event_effects(effects)
+            game.apply_event_effects(effects)
 
             # Handle zombie attacks
             from ..events import ZombieEvent
@@ -72,7 +74,7 @@ class NightPhaseHandler:
         # Notify events of night end
         if game.event_registry:
             effects = game.event_registry.on_night_end(game)
-            game._apply_event_effects(effects)
+            game.apply_event_effects(effects)
 
             # Handle ghost choices
             from ..events import GhostEvent
@@ -92,8 +94,10 @@ class NightPhaseHandler:
     def _apply_night_results(self, game: GameState, result: NightResult) -> list[str]:
         """Apply the results of night actions.
 
-        Returns:
+        Returns
+        -------
             List of player names who died
+
         """
         deaths = []
 
@@ -114,7 +118,7 @@ class NightPhaseHandler:
 
             if counter_killed:
                 print(
-                    f"💥 {result.assassin_target.name} fought back. {counter_killed.name} was killed instead."
+                    f"💥 {result.assassin_target.name} fought back. {counter_killed.name} was killed instead.",
                 )
                 game.eliminate_player(
                     counter_killed,
@@ -129,7 +133,7 @@ class NightPhaseHandler:
             else:
                 print(f"☠️  {result.assassin_target.name} was eliminated by the Assassins.")
                 print(
-                    f"💀 {result.assassin_target.name} was a {result.assassin_target.role.value}."
+                    f"💀 {result.assassin_target.name} was a {result.assassin_target.role.value}.",
                 )
                 game.eliminate_player(
                     result.assassin_target,
@@ -151,13 +155,15 @@ class NightPhaseHandler:
                 for event in game.event_registry.get_active_events():
                     if isinstance(event, GunNutEvent):
                         counter_killed = event.check_counter_attack(
-                            game, result.vigilante_target, vigilante
+                            game,
+                            result.vigilante_target,
+                            vigilante,
                         )
                         break
 
             if counter_killed:
                 print(
-                    f"💥 {result.vigilante_target.name} fought back. {counter_killed.name} was killed instead."
+                    f"💥 {result.vigilante_target.name} fought back. {counter_killed.name} was killed instead.",
                 )
                 print(f"💀 {counter_killed.name} was a {counter_killed.role.value}.")
                 game.eliminate_player(
@@ -172,7 +178,7 @@ class NightPhaseHandler:
             else:
                 print(f"☠️  {result.vigilante_target.name} was found dead.")
                 print(
-                    f"💀 {result.vigilante_target.name} was a {result.vigilante_target.role.value}."
+                    f"💀 {result.vigilante_target.name} was a {result.vigilante_target.role.value}.",
                 )
                 game.eliminate_player(
                     result.vigilante_target,
@@ -231,7 +237,7 @@ class NightPhaseHandler:
         if len(assassins_members) > 1:
             print(h5("Discussion"))
 
-            def get_assassin_statement(assassin, context, round_num):
+            def get_assassin_statement(assassin, context, _round_num):
                 teammates = [m.name for m in assassins_members if m.name != assassin.name]
                 teammate_info = f"Your fellow Assassins: {', '.join(teammates)}"
 
@@ -272,7 +278,7 @@ Share your thoughts with your fellow Assassins (1-2 sentences)."""
 
                 # Backwards compatibility
                 assassin = next(a for a in assassins_members if a.name == stmt.speaker)
-                assassin._last_assassin_statement = stmt.content
+                assassin.last_assassin_statement = stmt.content
 
         # Voting
         print(h5("Voting"))
@@ -282,7 +288,9 @@ Share your thoughts with your fellow Assassins (1-2 sentences)."""
             teammates = [m.name for m in assassins_members if m != assassin]
 
             prompt = game.context_builder.build_for_night_kill(
-                assassin, targets=target_names, team_members=teammates
+                assassin,
+                targets=target_names,
+                team_members=teammates,
             )
             system_context = game.context_builder.build_system_context(assassin, "night")
 
@@ -324,12 +332,17 @@ Share your thoughts with your fellow Assassins (1-2 sentences)."""
         target_names = [p.name for p in available_targets]
 
         prompt = game.context_builder.build_for_protection(
-            doctor, targets=target_names, last_protected=doctor.last_protected
+            doctor,
+            targets=target_names,
+            last_protected=doctor.last_protected,
         )
         system_context = game.context_builder.build_system_context(doctor, "night")
 
         choice, reasoning = self.llm.get_player_choice_with_reasoning(
-            player=doctor, prompt=prompt, valid_choices=target_names, context=system_context
+            player=doctor,
+            prompt=prompt,
+            valid_choices=target_names,
+            context=system_context,
         )
 
         target = game.get_player_by_name(choice)
@@ -368,7 +381,10 @@ Share your thoughts with your fellow Assassins (1-2 sentences)."""
         system_context = game.context_builder.build_system_context(detective, "night")
 
         choice, reasoning = self.llm.get_player_choice_with_reasoning(
-            player=detective, prompt=prompt, valid_choices=target_names, context=system_context
+            player=detective,
+            prompt=prompt,
+            valid_choices=target_names,
+            context=system_context,
         )
 
         target = game.get_player_by_name(choice)
@@ -408,7 +424,10 @@ Share your thoughts with your fellow Assassins (1-2 sentences)."""
         system_context = game.context_builder.build_system_context(vigilante, "night")
 
         choice, reasoning = self.llm.get_player_choice_with_reasoning(
-            player=vigilante, prompt=prompt, valid_choices=target_names, context=system_context
+            player=vigilante,
+            prompt=prompt,
+            valid_choices=target_names,
+            context=system_context,
         )
 
         print(f"  💭 {vigilante.name} thinks: {reasoning}")
@@ -475,7 +494,10 @@ Be weird, be enthusiastic, be MAD. Science waits for no one!
         )
 
         choice, reasoning = self.llm.get_player_choice_with_reasoning(
-            player=scientist, prompt=prompt, valid_choices=target_names, context=system_context
+            player=scientist,
+            prompt=prompt,
+            valid_choices=target_names,
+            context=system_context,
         )
 
         target = game.get_player_by_name(choice)
@@ -495,7 +517,7 @@ Be weird, be enthusiastic, be MAD. Science waits for no one!
             ("suicidal", "💀 Depression Serum", "injected with a serum causing dark thoughts"),
         ]
 
-        effect_type, effect_name, description = random.choice(effects)
+        effect_type, effect_name, _description = random.choice(effects)
 
         print(f"  🎲 Random effect selected: {effect_name}")
         print(f"  💉 {scientist.name} injects {target.name}!")
@@ -506,7 +528,9 @@ Be weird, be enthusiastic, be MAD. Science waits for no one!
             target.add_modifier(
                 game,
                 PlayerModifier(
-                    type="infected", source="mad_scientist", data={"infector": scientist.name}
+                    type="infected",
+                    source="mad_scientist",
+                    data={"infector": scientist.name},
                 ),
             )
             print(f"  🧟 {target.name} has been infected with the zombie virus...")
@@ -526,7 +550,7 @@ Be weird, be enthusiastic, be MAD. Science waits for no one!
                     ),
                 )
                 print(
-                    f"  💘 {target.name} has fallen in love with {beloved.name}! (unidirectional)"
+                    f"  💘 {target.name} has fallen in love with {beloved.name}! (unidirectional)",
                 )
 
         elif effect_type == "drunk":
@@ -534,7 +558,9 @@ Be weird, be enthusiastic, be MAD. Science waits for no one!
             target.add_modifier(
                 game,
                 PlayerModifier(
-                    type="drunk", source="mad_scientist", expires_on=game.day_number + 1
+                    type="drunk",
+                    source="mad_scientist",
+                    expires_on=game.day_number + 1,
                 ),
             )
             print(f"  🍺 {target.name} is now confused and disoriented...")

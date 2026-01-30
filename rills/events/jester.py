@@ -51,7 +51,8 @@ class JesterEvent(EventModifier):
             jester = random.choice(available)
             jester.is_jester = True  # Old flag (backward compatibility)
             jester.add_modifier(
-                game, PlayerModifier(type="jester", source="event:jester")
+                game,
+                PlayerModifier(type="jester", source="event:jester"),
             )  # NEW: permanent modifier
 
     def on_player_eliminated(self, game: "GameState", player: "Player", reason: str) -> None:
@@ -63,14 +64,18 @@ class JesterEvent(EventModifier):
             print("🎭 JESTER VICTORY! The game ends. Everyone else loses.\n")
 
     def on_player_eliminated_effects(
-        self, game: "GameState", player: "Player", reason: str
+        self,
+        game: "GameState",
+        player: "Player",
+        reason: str,
     ) -> list["Effect"]:
         """Return jester victory effect if jester was lynched."""
         from ..services.effect_service import Effect
 
         # Dual-check: old flag or new modifier
         is_jester = (hasattr(player, "is_jester") and player.is_jester) or player.has_modifier(
-            game, "jester"
+            game,
+            "jester",
         )
         if reason == "lynched" and is_jester:
             # Return a game-ending effect
@@ -80,15 +85,17 @@ class JesterEvent(EventModifier):
                     target="game",
                     source="jester_event",
                     data={"winner": player.name},
-                )
+                ),
             ]
         return []
 
     def check_jester_victory(self) -> bool:
         """Check if jester has won.
 
-        Returns:
+        Returns
+        -------
             True if jester won, False otherwise
+
         """
         return self._jester_won
 
@@ -96,10 +103,13 @@ class JesterEvent(EventModifier):
         """Get jester-specific context for the player.
 
         Args:
+        ----
             player: The player to get context for
 
         Returns:
+        -------
             Context string if player is jester, empty otherwise
+
         """
         if hasattr(player, "is_jester") and player.is_jester:
             return (

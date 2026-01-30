@@ -449,7 +449,11 @@ class TestVote:
 
     def test_redirected_vote(self):
         vote = Vote(
-            voter="Alice", target="Charlie", round_number=1, day_number=1, original_target="Bob"
+            voter="Alice",
+            target="Charlie",
+            round_number=1,
+            day_number=1,
+            original_target="Bob",
         )
 
         assert vote.was_redirected() is True

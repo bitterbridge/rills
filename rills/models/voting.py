@@ -114,7 +114,7 @@ class VoteResult:
             lines.append("No one is eliminated.")
         elif self.eliminated:
             lines.append(
-                f"\nResult: {self.eliminated} is eliminated with {self.vote_counts[self.eliminated]} vote(s)"
+                f"\nResult: {self.eliminated} is eliminated with {self.vote_counts[self.eliminated]} vote(s)",
             )
         else:
             lines.append("\nResult: No one is eliminated (no votes cast)")

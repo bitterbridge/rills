@@ -14,8 +14,7 @@ class ConversationService:
         self.history = ConversationHistory()
 
     def get_speaking_order(self, players: list[Any]) -> list[Any]:
-        """
-        Get personality-weighted speaking order.
+        """Get personality-weighted speaking order.
 
         Players with assertive personalities speak earlier,
         reserved personalities speak later, with randomization.
@@ -87,10 +86,10 @@ class ConversationService:
         get_statement_func: Callable,
         visibility: Visibility | None = None,
     ) -> ConversationRound:
-        """
-        Conduct a round of conversation.
+        """Conduct a round of conversation.
 
         Args:
+        ----
             participants: List of player objects
             phase: Phase name (e.g., "day_discussion", "assassin_discussion")
             round_number: Round number within this phase
@@ -100,7 +99,9 @@ class ConversationService:
             visibility: Visibility for statements (defaults to public)
 
         Returns:
+        -------
             ConversationRound object with all statements
+
         """
         if visibility is None:
             visibility = Visibility("public", [])
@@ -153,6 +154,7 @@ class ConversationService:
         """Get statements visible to a player in a specific phase.
 
         Args:
+        ----
             player_name: Name of the player viewing the statements
             phase: Phase to get statements from (e.g., "day_discussion")
             player_team: Player's team (needed for team visibility)
@@ -160,7 +162,9 @@ class ConversationService:
             exclude_self: Whether to exclude the player's own statements
 
         Returns:
+        -------
             List of statements the player can see
+
         """
         statements = self.get_statements_in_phase(phase, day_number)
 
@@ -188,7 +192,9 @@ class ConversationService:
         return self.history.search_content(keyword)
 
     def format_round_for_display(
-        self, round_obj: ConversationRound, show_thinking: bool = False
+        self,
+        round_obj: ConversationRound,
+        show_thinking: bool = False,
     ) -> str:
         """Format a conversation round for display."""
         lines = []

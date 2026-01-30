@@ -34,7 +34,6 @@ class ZombieEvent(EventModifier):
 
     def setup_game(self, game: "GameState") -> None:
         """No special setup needed for zombie mode."""
-        pass
 
     def on_player_eliminated(self, game: "GameState", player: "Player", reason: str) -> None:
         """When an infected player dies, they will rise as a zombie."""
@@ -101,10 +100,10 @@ class ZombieEvent(EventModifier):
 
                     if counter_killed:
                         print(
-                            f"💥 {victim.name} fought back! Zombie {counter_killed.name} was killed!"
+                            f"💥 {victim.name} fought back! Zombie {counter_killed.name} was killed!",
                         )
                         print(
-                            f"💀 {counter_killed.name} was a {counter_killed.role.value} (now a zombie)!"
+                            f"💀 {counter_killed.name} was a {counter_killed.role.value} (now a zombie)!",
                         )
                         # Remove zombie from active zombies
                         if counter_killed in self._active_zombies:
@@ -119,7 +118,8 @@ class ZombieEvent(EventModifier):
                         # Mark victim as infected (they'll rise when they die)
                         victim.is_zombie = True  # Old flag (backward compatibility)
                         victim.add_modifier(
-                            game, PlayerModifier(type="zombie", source="event:zombie")
+                            game,
+                            PlayerModifier(type="zombie", source="event:zombie"),
                         )  # NEW: permanent modifier
 
                         # Kill the victim

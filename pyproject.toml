@@ -54,30 +54,75 @@ target-version = "py311"
 
 [tool.ruff.lint]
 select = [
-    "E",   # pycodestyle errors
-    "W",   # pycodestyle warnings
-    "F",   # pyflakes
-    "I",   # isort
-    "B",   # flake8-bugbear
-    "C4",  # flake8-comprehensions
-    "UP",  # pyupgrade
+    "ALL",  # Enable all rules
 ]
+# Global ignores - apply to all files (production code standards)
 ignore = [
-    "E501",  # line too long (handled by black)
-    "B008",  # do not perform function calls in argument defaults
-    "C901",  # too complex
-    "B027",  # empty method in abstract base class (we have intentional optional hooks)
-    "E402",  # module level import not at top (sometimes needed for conditional imports)
+    "E501",    # line too long (handled by black)
+    "B008",    # do not perform function calls in argument defaults
+    "C901",    # too complex
+    "B027",    # empty method in abstract base class (we have intentional optional hooks)
+    "E402",    # module level import not at top (sometimes needed for conditional imports)
+    "D",       # pydocstyle (too many missing docstrings for now)
+    "ANN",     # flake8-annotations (mypy handles this)
+    "TD",      # flake8-todos
+    "FIX",     # flake8-fixme
+    "ERA001",  # eradicate (commented code - we may want to keep some)
+    "COM812",  # trailing comma (conflicts with black)
+    "ISC001",  # implicit string concatenation (conflicts with formatter)
+    "TID252",  # Relative imports (we use relative imports in packages)
+    "T201",    # print found (we use print for game output)
+    "S311",    # Standard pseudo-random (we use random for gameplay, not crypto)
+    "ARG002",  # Unused method argument (event hooks have standard signatures)
+    "PLR0913", # Too many arguments (game has complex configuration)
+    "PLR0912", # Too many branches (game has complex logic paths)
+    "PLR0915", # Too many statements (game has long procedures)
+    "PLR0911", # Too many return statements
+    "FBT001",  # Boolean positional arg (game has many feature toggle flags)
+    "FBT002",  # Boolean default positional arg
+    "PLC0415", # Import should be at top-level (we use lazy imports to avoid cycles)
+    "BLE001",  # Blind exception (intentional broad catches for robustness)
+    "TRY003",  # Long exception message
+    "EM101",   # Exception with string literal
+    "EM102",   # Exception with f-string
+    "SIM108",  # Use ternary operator (readability preference)
+    "SIM102",  # Use single if (readability preference)
+    "RET504",  # Unnecessary assignment before return (readability)
+    "RET505",  # Unnecessary else/elif after return (readability)
+    "DTZ005",  # datetime.now() without tz (not needed for game timestamps)
+    "PERF401", # Use list comprehension (readability preference)
+    "RUF001",  # Ambiguous unicode (using emoji intentionally for output)
+    "RUF005",  # Consider unpacking (readability preference)
+    "TRY300",  # Consider moving statement to else (readability)
+    "PLR2004", # Magic values - game constants are intentional design choices
+    "E501",    # Line too long (black handles line length)
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"__init__.py" = ["F401"]  # unused imports
+# Package init files
+"__init__.py" = [
+    "F401",  # unused imports (re-exports)
+]
+
+# Test files - relaxed rules appropriate for testing
+"tests/**" = [
+    "S101",    # assert - standard for pytest
+    "ARG001",  # unused args - fixtures have standard signatures
+    "PT001",   # pytest.fixture() style is fine
+    "SLF001",  # private member access - testing internals
+]
+
+# Script files
+"play.py" = [
+    "EXE001",  # shebang in non-executable
+    "PLR1722", # use sys.exit (exit() is fine for scripts)
+]
 
 [tool.mypy]
 python_version = "3.11"
 warn_return_any = true
 warn_unused_configs = true
-disallow_untyped_defs = false  # Start lenient, we can tighten later
+disallow_untyped_defs = true
 check_untyped_defs = true
 no_implicit_optional = true
 warn_redundant_casts = true
@@ -85,11 +130,40 @@ warn_unused_ignores = true
 warn_no_return = true
 warn_unreachable = true
 strict_equality = true
+disallow_any_generics = true
+disallow_subclassing_any = true
+disallow_incomplete_defs = true
 
-# Ignore certain errors for now (can be removed as we improve types)
+# Allow some flexibility for external libraries
+[[tool.mypy.overrides]]
+module = "anthropic.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false  # Tests can be more lenient
+
+[[tool.mypy.overrides]]
+module = "rills.models.*"
+disallow_untyped_defs = false  # Data models - focus on runtime correctness
+disallow_any_generics = false  # Allow untyped generics
+disallow_incomplete_defs = false  # Allow partial type annotations
+
+[[tool.mypy.overrides]]
+module = "rills.services.*"
+disallow_untyped_defs = false  # Services - focus on functionality
+disallow_any_generics = false  # Allow untyped generics
+disallow_incomplete_defs = false  # Allow partial type annotations
+
+[[tool.mypy.overrides]]
+module = "rills.phases.*"
+disallow_untyped_defs = false  # Game phases - complex logic
+disallow_any_generics = false  # Allow untyped generics
+disallow_incomplete_defs = false  # Allow partial type annotations
+
 [[tool.mypy.overrides]]
 module = "rills.llm"
-disable_error_code = ["call-overload", "no-any-return"]
+ignore_errors = true  # Anthropic SDK has complex generic types that don't type-check cleanly
 
 
 [tool.bandit]
@@ -100,6 +174,3 @@ skips = ["B101", "B311"]  # Skip assert_used and random (game uses random for ga
 convention = "google"
 add_ignore = ["D100", "D101", "D102", "D103", "D104", "D105", "D107"]
 match = "(?!test_).*\\.py"
-[[tool.mypy.overrides]]
-module = "rills.game"
-disable_error_code = ["assignment"]

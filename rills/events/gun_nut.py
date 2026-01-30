@@ -49,24 +49,29 @@ class GunNutEvent(EventModifier):
             gun_nut = random.choice(available)
             gun_nut.is_gun_nut = True  # Old flag (backward compatibility)
             gun_nut.add_modifier(
-                game, PlayerModifier(type="gun_nut", source="event:gun_nut")
+                game,
+                PlayerModifier(type="gun_nut", source="event:gun_nut"),
             )  # NEW: permanent modifier
 
     def on_player_eliminated(self, game: "GameState", player: "Player", reason: str) -> None:
         """No special behavior - counter attack is handled in phases."""
-        pass
 
     def check_counter_attack(
-        self, game: "GameState", target: "Player", attacker: Optional["Player"] = None
+        self,
+        game: "GameState",
+        target: "Player",
+        attacker: Optional["Player"] = None,
     ) -> Optional["Player"]:
         """Check if gun nut fights back when targeted.
 
         Args:
+        ----
             game: The game state
             target: The player being attacked
             attacker: The specific attacker (if known, e.g., Vigilante)
 
         Returns the attacker who dies, if any.
+
         """
         from ..roles import Role
 

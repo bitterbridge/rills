@@ -53,30 +53,38 @@ class PriestEvent(EventModifier):
             priest.add_modifier(
                 game,
                 PlayerModifier(
-                    type="priest", source="event:priest", data={"resurrections_available": 1}
+                    type="priest",
+                    source="event:priest",
+                    data={"resurrections_available": 1},
                 ),
             )  # NEW: permanent modifier with resurrection count
 
     def on_player_eliminated(self, game: "GameState", player: "Player", reason: str) -> None:
         """No special behavior on elimination."""
-        pass
 
     def attempt_resurrection(
-        self, priest: "Player", target_name: str, game: "GameState"
+        self,
+        priest: "Player",
+        target_name: str,
+        game: "GameState",
     ) -> Optional["Player"]:
         """Attempt to resurrect a dead player.
 
         Args:
+        ----
             priest: The priest attempting resurrection
             target_name: Name of the dead player to resurrect
             game: The game state
 
         Returns:
+        -------
             The resurrected player if successful, None otherwise
+
         """
         # Dual-check: old flag or new modifier
         is_priest = (hasattr(priest, "is_priest") and priest.is_priest) or priest.has_modifier(
-            game, "priest"
+            game,
+            "priest",
         )
         if not is_priest:
             return None
@@ -106,10 +114,13 @@ class PriestEvent(EventModifier):
         """Check if priest can still resurrect.
 
         Args:
+        ----
             priest: The player to check
 
         Returns:
+        -------
             True if they can resurrect, False otherwise
+
         """
         return (
             hasattr(priest, "is_priest")
@@ -123,11 +134,14 @@ class PriestEvent(EventModifier):
         """Get priest-specific context.
 
         Args:
+        ----
             player: The player to get context for
             game: The game state
 
         Returns:
+        -------
             Context string if player is priest with power available
+
         """
         if not self.can_resurrect(player):
             return ""

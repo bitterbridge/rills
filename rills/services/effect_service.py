@@ -24,17 +24,21 @@ class EffectService:
     """Applies effects to game state."""
 
     def apply(
-        self, effect: Effect, player_states: dict[str, PlayerState]
+        self,
+        effect: Effect,
+        player_states: dict[str, PlayerState],
     ) -> dict[str, PlayerState]:
-        """
-        Apply an effect to player states.
+        """Apply an effect to player states.
 
         Args:
+        ----
             effect: The effect to apply
             player_states: Dictionary of player_name -> PlayerState
 
         Returns:
+        -------
             Updated player_states dictionary
+
         """
         # Create a copy to avoid mutating original
         new_states = deepcopy(player_states)
@@ -55,7 +59,9 @@ class EffectService:
             raise ValueError(f"Unknown effect type: {effect.type}")
 
     def apply_batch(
-        self, effects: list[Effect], player_states: dict[str, PlayerState]
+        self,
+        effects: list[Effect],
+        player_states: dict[str, PlayerState],
     ) -> dict[str, PlayerState]:
         """Apply multiple effects in sequence."""
         current_states = player_states
@@ -64,7 +70,9 @@ class EffectService:
         return current_states
 
     def _add_modifier(
-        self, effect: Effect, states: dict[str, PlayerState]
+        self,
+        effect: Effect,
+        states: dict[str, PlayerState],
     ) -> dict[str, PlayerState]:
         """Add a modifier to a player."""
         if effect.target not in states:
@@ -84,7 +92,9 @@ class EffectService:
         return states
 
     def _remove_modifier(
-        self, effect: Effect, states: dict[str, PlayerState]
+        self,
+        effect: Effect,
+        states: dict[str, PlayerState],
     ) -> dict[str, PlayerState]:
         """Remove a modifier from a player."""
         if effect.target not in states:
@@ -98,7 +108,9 @@ class EffectService:
         return states
 
     def _kill_player(
-        self, effect: Effect, states: dict[str, PlayerState]
+        self,
+        effect: Effect,
+        states: dict[str, PlayerState],
     ) -> dict[str, PlayerState]:
         """Kill a player."""
         if effect.target not in states:
@@ -120,7 +132,9 @@ class EffectService:
         return states
 
     def _revive_player(
-        self, effect: Effect, states: dict[str, PlayerState]
+        self,
+        effect: Effect,
+        states: dict[str, PlayerState],
     ) -> dict[str, PlayerState]:
         """Revive a player."""
         if effect.target not in states:
@@ -133,7 +147,9 @@ class EffectService:
         return states
 
     def _change_role(
-        self, effect: Effect, states: dict[str, PlayerState]
+        self,
+        effect: Effect,
+        states: dict[str, PlayerState],
     ) -> dict[str, PlayerState]:
         """Change a player's role."""
         if effect.target not in states:
@@ -147,7 +163,9 @@ class EffectService:
         return states
 
     def _change_team(
-        self, effect: Effect, states: dict[str, PlayerState]
+        self,
+        effect: Effect,
+        states: dict[str, PlayerState],
     ) -> dict[str, PlayerState]:
         """Change a player's team."""
         if effect.target not in states:
@@ -186,7 +204,10 @@ class EffectService:
     def create_death_effect(target: str, source: str, cause: str, day: int) -> Effect:
         """Factory method to create a death effect."""
         return Effect(
-            type="kill_player", target=target, source=source, data={"cause": cause, "day": day}
+            type="kill_player",
+            target=target,
+            source=source,
+            data={"cause": cause, "day": day},
         )
 
     @staticmethod

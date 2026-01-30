@@ -26,11 +26,14 @@ class Visibility:
 
     scope: Literal["public", "private", "team", "role"]
     targets: list[str] = field(
-        default_factory=list
+        default_factory=list,
     )  # Player names for private/team, empty for public
 
     def is_visible_to(
-        self, player_name: str, player_team: str | None = None, player_role: str | None = None
+        self,
+        player_name: str,
+        player_team: str | None = None,
+        player_role: str | None = None,
     ) -> bool:
         """Check if information is visible to a specific player."""
         if self.scope == "public":
@@ -105,7 +108,10 @@ class InformationStore:
         return self._info.get(info_id)
 
     def get_visible_to(
-        self, player_name: str, player_team: str | None = None, player_role: str | None = None
+        self,
+        player_name: str,
+        player_team: str | None = None,
+        player_role: str | None = None,
     ) -> list[Information]:
         """Get all information visible to a player."""
         visible = []
@@ -149,7 +155,9 @@ class InformationStore:
             if source and info.source != source:
                 continue
             if visible_to and not info.visibility.is_visible_to(
-                visible_to, player_team, player_role
+                visible_to,
+                player_team,
+                player_role,
             ):
                 continue
 

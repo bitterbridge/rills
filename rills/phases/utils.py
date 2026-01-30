@@ -6,17 +6,19 @@ from ..player import Player
 
 
 def get_speaking_order(players: list[Player]) -> list[Player]:
-    """
-    Determine speaking order with personality-weighted randomization.
+    """Determine speaking order with personality-weighted randomization.
 
     Players with assertive personalities are more likely to speak first,
     while quiet/reserved personalities are more likely to speak later.
 
     Args:
+    ----
         players: List of players
 
     Returns:
+    -------
         List of players in speaking order
+
     """
     # Personality keywords that indicate high initiative (speak early)
     assertive_keywords = [

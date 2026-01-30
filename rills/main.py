@@ -1,6 +1,7 @@
 """Main game loop and CLI."""
 
 import argparse
+import sys
 import time
 
 from rich.console import Console
@@ -145,14 +146,17 @@ def display_game_end(game: GameState) -> None:
         console.print(f"  {status} {player.name} - {role_display} ({player.team})")
 
 
-def generate_player_configs(num_players: int) -> list[dict]:
+def generate_player_configs(num_players: int) -> list[dict[str, str]]:
     """Generate player configurations dynamically.
 
     Args:
+    ----
         num_players: Number of players (5-20)
 
     Returns:
+    -------
         List of player configuration dicts
+
     """
     # Extended pool of names
     names = [
@@ -205,7 +209,8 @@ def generate_player_configs(num_players: int) -> list[dict]:
     # Role distribution: roughly 1/3 Assassins, rest divided among power roles and villagers
     num_assassins = max(2, num_players // 3)
     num_power_roles = min(
-        4, num_players - num_assassins - 1
+        4,
+        num_players - num_assassins - 1,
     )  # Doctor, Detective, Vigilante, Mad Scientist
     num_villagers = num_players - num_assassins - num_power_roles
 
@@ -222,13 +227,14 @@ def generate_player_configs(num_players: int) -> list[dict]:
 
 
 def run_game(game: GameState, llm_agent: LLMAgent, delay: float = 1.0) -> None:
-    """
-    Run the main game loop.
+    """Run the main game loop.
 
     Args:
+    ----
         game: The game state
         llm_agent: LLM agent for decision making
         delay: Delay between phases in seconds
+
     """
     phase_manager = PhaseManager(llm_agent)
 
@@ -268,7 +274,7 @@ def run_game(game: GameState, llm_agent: LLMAgent, delay: float = 1.0) -> None:
                         "   ⚠️  IMPORTANT: If someone says they saw you moving at night, THIS IS A REAL GAME MECHANIC!\n"
                         "   The Insomniac player can genuinely see movement. Don't automatically assume they're lying.\n"
                         "   Power roles (Doctor, Detective, Vigilante, Assassins) DO move at night to use their abilities.\n"
-                        "   Being seen moving does NOT prove someone is an Assassin - it could be any power role!"
+                        "   Being seen moving does NOT prove someone is an Assassin - it could be any power role!",
                     )
                 elif event.name == "Zombie Mode":
                     event_explanations.append(
@@ -276,7 +282,7 @@ def run_game(game: GameState, llm_agent: LLMAgent, delay: float = 1.0) -> None:
                         "   The infected player DOES NOT KNOW they are infected - they play as a normal villager.\n"
                         "   If/when they die (by lynch or assassination), they will RISE AS A ZOMBIE the next night.\n"
                         "   Zombies attack and infect villagers each night - victims become new zombies when killed.\n"
-                        "   This can create exponential zombie spread if not stopped!"
+                        "   This can create exponential zombie spread if not stopped!",
                     )
                 elif event.name == "Ghost Mode":
                     event_explanations.append(
@@ -284,14 +290,14 @@ def run_game(game: GameState, llm_agent: LLMAgent, delay: float = 1.0) -> None:
                         "   When players die, they may return as ghosts who can haunt one living player.\n"
                         "   Ghosts can speak and make accusations through their haunted target.\n"
                         "   Ghost statements will appear in the format: 'A ghostly voice (claiming to be [Name]) says...'\n"
-                        "   Ghosts are trying to help their team from beyond the grave!"
+                        "   Ghosts are trying to help their team from beyond the grave!",
                     )
                 elif event.name == "Sleepwalker Mode":
                     event_explanations.append(
                         "🌙 SLEEPWALKER: One player sleepwalks at night and wanders around unconsciously.\n"
                         "   The sleepwalker does NOT know they are sleepwalking.\n"
                         "   They may be spotted by Insomniacs or others who can see nighttime movement.\n"
-                        "   Being a sleepwalker does NOT make someone evil - it's just a quirk!"
+                        "   Being a sleepwalker does NOT make someone evil - it's just a quirk!",
                     )
                 elif event.name == "Gun Nut Mode":
                     event_explanations.append(
@@ -299,46 +305,46 @@ def run_game(game: GameState, llm_agent: LLMAgent, delay: float = 1.0) -> None:
                         "   If Assassins try to kill them at night, there's a 50% chance the Gun Nut will SHOOT BACK!\n"
                         "   When successful, a random attacker dies and the Gun Nut survives.\n"
                         "   The Gun Nut will know privately that they killed someone, but others won't know how the person died.\n"
-                        "   This can happen multiple times - each attack has a 50% chance of backfiring!"
+                        "   This can happen multiple times - each attack has a 50% chance of backfiring!",
                     )
                 elif event.name == "Suicidal Mode":
                     event_explanations.append(
-                        "💀 SUICIDAL: One player is struggling with dark thoughts and may take their own life during the night!"
+                        "💀 SUICIDAL: One player is struggling with dark thoughts and may take their own life during the night!",
                     )
                 elif event.name == "Drunk Mode":
                     event_explanations.append(
                         "🍺 DRUNK: One player is drunk and confused.\n"
                         "   When they vote during the day, their vote will go to a RANDOM player instead of their intended target!\n"
                         "   The drunk player won't know their vote was redirected.\n"
-                        "   This can lead to unexpected vote outcomes!"
+                        "   This can lead to unexpected vote outcomes!",
                     )
                 elif event.name == "Jester Mode":
                     event_explanations.append(
                         "🃏 JESTER: One player is a Jester who WANTS to be executed!\n"
                         "   If the Jester is lynched by the town, the Jester WINS and the game ends immediately.\n"
                         "   The Jester doesn't know who the Assassins are - they're just trying to seem suspicious.\n"
-                        "   Be careful who you vote for - they might be trying to get lynched!"
+                        "   Be careful who you vote for - they might be trying to get lynched!",
                     )
                 elif event.name == "Priest Mode":
                     event_explanations.append(
                         "🙏 PRIEST: One player is a Priest with the power to resurrect the dead!\n"
                         "   During any day phase, the Priest can bring ONE dead player back to life.\n"
                         "   This is a one-time ability - use it wisely!\n"
-                        "   The Priest must choose carefully who to resurrect."
+                        "   The Priest must choose carefully who to resurrect.",
                     )
                 elif event.name == "Lovers Mode":
                     event_explanations.append(
                         "💕 LOVERS: Two players are secretly bound by true love.\n"
                         "   The lovers know each other's identities, but others don't know who they are.\n"
                         "   If one lover dies (by any means), the other will die of heartbreak the next night.\n"
-                        "   Lovers can be on different teams - love transcends allegiances!"
+                        "   Lovers can be on different teams - love transcends allegiances!",
                     )
                 elif event.name == "Bodyguard Mode":
                     event_explanations.append(
                         "🛡️  BODYGUARD: One player is a loyal bodyguard willing to sacrifice themselves.\n"
                         "   During a night phase, the Bodyguard can choose someone to protect.\n"
                         "   If Assassins attack the protected person, the Bodyguard DIES IN THEIR PLACE!\n"
-                        "   This is a one-time ability - the Bodyguard can only sacrifice themselves once."
+                        "   This is a one-time ability - the Bodyguard can only sacrifice themselves once.",
                     )
 
             for explanation in event_explanations:
@@ -355,7 +361,7 @@ def run_game(game: GameState, llm_agent: LLMAgent, delay: float = 1.0) -> None:
         print(f"The Assassins are: {', '.join(assassin_names)}\n")
         print("You work together to eliminate villagers at night.")
         print(
-            "Coordinate your strategy, but be careful during the day - don't reveal yourselves!\n"
+            "Coordinate your strategy, but be careful during the day - don't reveal yourselves!\n",
         )
 
         # Use InformationService to track team information
@@ -423,7 +429,7 @@ Keep your introduction brief (1-2 sentences).""",
         else:
             role_display = p.role.value
         role_summary_lines.append(
-            f"  - {p.name} was {role_display} ({'alive' if p.alive else 'dead'})"
+            f"  - {p.name} was {role_display} ({'alive' if p.alive else 'dead'})",
         )
     role_summary = "\n".join(role_summary_lines)
 
@@ -447,8 +453,8 @@ Keep your introduction brief (1-2 sentences).""",
         # Build context of what others have said
         prior_statements = ""
         for other in game.players:
-            if other != player and hasattr(other, "_postgame_statement"):
-                prior_statements += f"\n{other.name} said: {other._postgame_statement}"
+            if other != player and hasattr(other, "postgame_statement"):
+                prior_statements += f"\n{other.name} said: {other.postgame_statement}"
 
         postgame_context = f"""The game is over. The {game.winner} team won.
 
@@ -494,7 +500,7 @@ ROLE TERMINOLOGY: Use exact role names - Doctor (not Healer), Detective (not Inv
         print(f"💬 {player.name}{alive_marker}{ghost_marker} ({role_display}): {statement}\n")
 
         # Store for others to read
-        player._postgame_statement = statement
+        player.postgame_statement = statement
 
         time.sleep(delay * 0.5)  # Shorter delay for postgame
 
@@ -518,19 +524,17 @@ ROLE TERMINOLOGY: Use exact role names - Doctor (not Healer), Detective (not Inv
             # Build context of what others have said in this round
             prior_discussion = ""
             for other in game.players:
-                if other != player and hasattr(other, f"_suggestion_round_{round_num}"):
+                if other != player and hasattr(other, f"suggestion_round_{round_num}"):
                     prior_discussion += (
-                        f"\n{other.name} said: {getattr(other, f'_suggestion_round_{round_num}')}"
+                        f"\n{other.name} said: {getattr(other, f'suggestion_round_{round_num}')}"
                     )
 
             # For round 2, also include what was said in round 1
             if round_num == 1:
                 prior_round_discussion = ""
                 for other in game.players:
-                    if hasattr(other, "_suggestion_round_0"):
-                        prior_round_discussion += (
-                            f"\n{other.name} said: {other._suggestion_round_0}"
-                        )
+                    if hasattr(other, "suggestion_round_0"):
+                        prior_round_discussion += f"\n{other.name} said: {other.suggestion_round_0}"
 
             if round_num == 0:
                 suggestion_context = f"""The game is over. Now the players are discussing how to improve the game.
@@ -578,7 +582,7 @@ Respond to the feedback discussion about improving the game (1-2 sentences)."""
             print(f"💬 {player.name}: {statement}\n")
 
             # Store statement for others to read
-            setattr(player, f"_suggestion_round_{round_num}", statement)
+            setattr(player, f"suggestion_round_{round_num}", statement)
 
             time.sleep(delay * 0.5)
 
@@ -586,7 +590,7 @@ Respond to the feedback discussion about improving the game (1-2 sentences)."""
             print()  # Extra spacing between rounds
 
 
-def main():
+def main() -> int:
     """Main entry point for the CLI."""
     parser = argparse.ArgumentParser(
         description="ASSASSINS - LLM-powered Mafia game",
@@ -610,7 +614,9 @@ Examples:
         help="Enable Zombie event (infected players rise from the dead)",
     )
     parser.add_argument(
-        "--ghost", action="store_true", help="Enable Ghost event (dead players haunt the living)"
+        "--ghost",
+        action="store_true",
+        help="Enable Ghost event (dead players haunt the living)",
     )
     parser.add_argument(
         "--sleepwalker",
@@ -638,19 +644,29 @@ Examples:
         help="Enable Drunk event (player's vote goes to random target)",
     )
     parser.add_argument(
-        "--jester", action="store_true", help="Enable Jester event (player wins by getting lynched)"
+        "--jester",
+        action="store_true",
+        help="Enable Jester event (player wins by getting lynched)",
     )
     parser.add_argument(
-        "--priest", action="store_true", help="Enable Priest event (can resurrect one dead player)"
+        "--priest",
+        action="store_true",
+        help="Enable Priest event (can resurrect one dead player)",
     )
     parser.add_argument(
-        "--lovers", action="store_true", help="Enable Lovers event (two players die if one dies)"
+        "--lovers",
+        action="store_true",
+        help="Enable Lovers event (two players die if one dies)",
     )
     parser.add_argument(
-        "--bodyguard", action="store_true", help="Enable Bodyguard event (dies protecting someone)"
+        "--bodyguard",
+        action="store_true",
+        help="Enable Bodyguard event (dies protecting someone)",
     )
     parser.add_argument(
-        "--chaos", action="store_true", help="CHAOS MODE - enable ALL events at once!"
+        "--chaos",
+        action="store_true",
+        help="CHAOS MODE - enable ALL events at once!",
     )
     parser.add_argument(
         "--delay",
@@ -712,4 +728,4 @@ Examples:
 
 
 if __name__ == "__main__":
-    exit(main())
+    sys.exit(main())

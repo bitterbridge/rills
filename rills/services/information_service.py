@@ -21,10 +21,12 @@ class InformationService:
         """Create and distribute death information to all players.
 
         Args:
+        ----
             player_name: Name of the player who died
             role: Display name of the role (use Role.display_name() for proper grammar)
             cause: Cause of death
             day: Day number when death occurred
+
         """
         info = Information.create(
             content=f"{player_name} died. They were {role}.",
@@ -61,7 +63,12 @@ class InformationService:
         return info_id
 
     def reveal_to_player(
-        self, player_name: str, content: str, category: InfoCategory, day: int, **metadata
+        self,
+        player_name: str,
+        content: str,
+        category: InfoCategory,
+        day: int,
+        **metadata,
     ) -> str:
         """Reveal private information to a specific player."""
         info = Information.create(
@@ -107,7 +114,12 @@ class InformationService:
         return info_id
 
     def reveal_to_all(
-        self, content: str, category: InfoCategory, day: int, source: str = "game", **metadata
+        self,
+        content: str,
+        category: InfoCategory,
+        day: int,
+        source: str = "game",
+        **metadata,
     ) -> str:
         """Reveal public information to all players."""
         info = Information.create(

@@ -71,7 +71,8 @@ class TestGameState:
         from rills.models import InfoCategory
 
         death_context = game_state.info_service.build_context_for(
-            bob.name, category=InfoCategory.DEATH
+            bob.name,
+            category=InfoCategory.DEATH,
         )
         assert "Alice died" in death_context
         assert "Assassin" in death_context

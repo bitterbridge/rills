@@ -44,10 +44,10 @@ class Player:
     bodyguard_active: bool = False
     insomniac_sighting: str | None = None
     last_protected: str | None = None  # Doctor can't save same person twice in a row
-    _last_assassin_statement: str | None = None  # Backwards compatibility
-    _postgame_statement: str | None = None  # Backwards compatibility
+    last_assassin_statement: str | None = None  # Backwards compatibility
+    postgame_statement: str | None = None  # Backwards compatibility
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Initialize player with role information."""
         role_info = get_role_info(self.role)
         self.team = role_info["team"]
@@ -64,10 +64,13 @@ class Player:
         """Get the PlayerState for this player.
 
         Args:
+        ----
             game: The game state containing player states
 
         Returns:
+        -------
             The PlayerState for this player
+
         """
         return game.player_states[self.name]
 
@@ -75,11 +78,14 @@ class Player:
         """Check if player has a specific modifier.
 
         Args:
+        ----
             game: The game state containing player states
             modifier_type: The type of modifier to check for
 
         Returns:
+        -------
             True if the player has this modifier, False otherwise
+
         """
         return self.get_state(game).has_modifier(modifier_type)
 
@@ -87,8 +93,10 @@ class Player:
         """Add a modifier to this player.
 
         Args:
+        ----
             game: The game state containing player states
             modifier: The modifier to add
+
         """
         self.get_state(game).add_modifier(modifier)
 
@@ -96,11 +104,14 @@ class Player:
         """Remove a modifier from this player.
 
         Args:
+        ----
             game: The game state containing player states
             modifier_type: The type of modifier to remove
 
         Returns:
+        -------
             True if a modifier was removed, False otherwise
+
         """
         return self.get_state(game).remove_modifier(modifier_type)
 
@@ -108,11 +119,14 @@ class Player:
         """Get a specific modifier if it exists.
 
         Args:
+        ----
             game: The game state containing player states
             modifier_type: The type of modifier to get
 
         Returns:
+        -------
             The modifier if found, None otherwise
+
         """
         return self.get_state(game).get_modifier(modifier_type)
 
@@ -143,7 +157,9 @@ class Player:
         reveal_to_player(), etc. to track game information.
 
         Args:
+        ----
             memory: Memory string to add (deprecated)
+
         """
         warnings.warn(
             "Player.add_memory() is deprecated. Use InformationService instead.",
@@ -152,7 +168,7 @@ class Player:
         )
         self._memories_deprecated.append(memory)
 
-    def get_context(self, phase: str, visible_info: dict) -> str:
+    def get_context(self, phase: str, visible_info: dict[str, str]) -> str:
         """Generate context string for LLM prompting.
 
         DEPRECATED: Use ContextBuilder.build_system_context() instead.
@@ -183,39 +199,39 @@ class Player:
         special_status = []
         if self.suicidal:
             special_status.append(
-                "You have been struggling with dark thoughts and feel an overwhelming despair."
+                "You have been struggling with dark thoughts and feel an overwhelming despair.",
             )
         if self.is_zombie and self.alive:
             special_status.append(
-                "You're not feeling well - you were bitten on the ankle by a rather ugly passerby a few days ago, and the wound has been bothering you. Probably nothing serious."
+                "You're not feeling well - you were bitten on the ankle by a rather ugly passerby a few days ago, and the wound has been bothering you. Probably nothing serious.",
             )
         elif self.is_zombie and not self.alive:
             special_status.append(
-                "You are a ZOMBIE - you have risen from the dead with an insatiable hunger for brains!"
+                "You are a ZOMBIE - you have risen from the dead with an insatiable hunger for brains!",
             )
         if self.is_ghost:
             special_status.append(
-                f"You are a GHOST haunting {self.haunting_target}. You cannot speak or act, only observe."
+                f"You are a GHOST haunting {self.haunting_target}. You cannot speak or act, only observe.",
             )
         if self.is_sleepwalker:
             special_status.append(
-                "You are a sleepwalker - you wander around at night and might be seen by others."
+                "You are a sleepwalker - you wander around at night and might be seen by others.",
             )
         if self.is_insomniac:
             special_status.append(
-                "You have insomnia - you stay awake and sometimes see people moving around at night."
+                "You have insomnia - you stay awake and sometimes see people moving around at night.",
             )
         if self.is_gun_nut:
             special_status.append(
-                "You keep a gun under your pillow - if Assassins attack you, you'll fight back!"
+                "You keep a gun under your pillow - if Assassins attack you, you'll fight back!",
             )
         if self.is_drunk:
             special_status.append(
-                "You've had too much to drink - you're feeling a bit confused and disoriented."
+                "You've had too much to drink - you're feeling a bit confused and disoriented.",
             )
         if self.vigilante_has_killed:
             special_status.append(
-                "You already used your ONE vigilante shot - you cannot kill again."
+                "You already used your ONE vigilante shot - you cannot kill again.",
             )
 
         if special_status:

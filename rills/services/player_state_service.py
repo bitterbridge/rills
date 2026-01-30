@@ -19,10 +19,12 @@ class PlayerModifier:
     - lover: Player is linked to another player
     - protected: Player is protected from night kills
 
-    Attributes:
+    Attributes
+    ----------
         type: The type of modifier (e.g., "drunk", "zombie", "protected")
         data: Additional data specific to this modifier type
         expires_on_day: Day number when this modifier expires (None = permanent)
+
     """
 
     type: str
@@ -43,12 +45,14 @@ class PlayerState:
     This replaces the scattered boolean flags on the Player class with a
     unified state management system using modifiers.
 
-    Attributes:
+    Attributes
+    ----------
         name: Player name
         role: Player's role type
         team: Player's team alignment
         alive: Whether the player is alive
         modifiers: List of active modifiers on this player
+
     """
 
     name: str
@@ -61,7 +65,9 @@ class PlayerState:
         """Add a modifier to this player.
 
         Args:
+        ----
             modifier: The modifier to add
+
         """
         # Don't add duplicates of the same type (remove old one first)
         self.modifiers = [m for m in self.modifiers if m.type != modifier.type]
@@ -71,10 +77,13 @@ class PlayerState:
         """Remove a modifier from this player.
 
         Args:
+        ----
             modifier_type: The type of modifier to remove
 
         Returns:
+        -------
             True if a modifier was removed, False otherwise
+
         """
         original_length = len(self.modifiers)
         self.modifiers = [m for m in self.modifiers if m.type != modifier_type]
@@ -84,10 +93,13 @@ class PlayerState:
         """Check if player has a specific modifier type.
 
         Args:
+        ----
             modifier_type: The type of modifier to check for
 
         Returns:
+        -------
             True if the player has this modifier, False otherwise
+
         """
         return any(m.type == modifier_type for m in self.modifiers)
 
@@ -95,10 +107,13 @@ class PlayerState:
         """Get a specific modifier if it exists.
 
         Args:
+        ----
             modifier_type: The type of modifier to get
 
         Returns:
+        -------
             The modifier if found, None otherwise
+
         """
         for modifier in self.modifiers:
             if modifier.type == modifier_type:
@@ -109,10 +124,13 @@ class PlayerState:
         """Remove expired modifiers.
 
         Args:
+        ----
             current_day: Current day number
 
         Returns:
+        -------
             List of modifier types that were removed
+
         """
         expired = [m.type for m in self.modifiers if m.is_expired(current_day)]
         self.modifiers = [m for m in self.modifiers if not m.is_expired(current_day)]
@@ -121,7 +139,9 @@ class PlayerState:
     def get_all_modifiers(self) -> list[PlayerModifier]:
         """Get all active modifiers.
 
-        Returns:
+        Returns
+        -------
             List of all modifiers on this player
+
         """
         return self.modifiers.copy()

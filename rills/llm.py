@@ -20,7 +20,7 @@ class PlayerStatement(BaseModel):
     """Schema for player free-form statement with internal thinking."""
 
     thinking: str = Field(
-        description="Internal deliberation/reasoning (1-2 sentences) - visible only in transcript"
+        description="Internal deliberation/reasoning (1-2 sentences) - visible only in transcript",
     )
     statement: str = Field(description="The public statement to other players")
 
@@ -39,19 +39,25 @@ class LLMAgent:
         self.model = model
 
     def get_player_choice(
-        self, player: Player, prompt: str, valid_choices: list[str], context: str = ""
+        self,
+        player: Player,
+        prompt: str,
+        valid_choices: list[str],
+        context: str = "",
     ) -> str:
-        """
-        Get a decision from a player using the LLM with structured output.
+        """Get a decision from a player using the LLM with structured output.
 
         Args:
+        ----
             player: The player making the decision
             prompt: The specific question/prompt
             valid_choices: List of valid choice strings
             context: Additional context about the game state
 
         Returns:
+        -------
             The player's choice (one of valid_choices)
+
         """
         system_message = player.get_context(phase=context or "game", visible_info={})
 
@@ -75,7 +81,7 @@ Choose exactly one option from the list above."""
                         "type": "string",
                         "description": "The exact choice from the available options",
                         "enum": valid_choices,
-                    }
+                    },
                 },
                 "required": ["choice"],
             },
@@ -116,12 +122,18 @@ Choose exactly one option from the list above."""
             return valid_choices[0]
 
     def get_player_choice_with_reasoning(
-        self, player: Player, prompt: str, valid_choices: list[str], context: str = ""
+        self,
+        player: Player,
+        prompt: str,
+        valid_choices: list[str],
+        context: str = "",
     ) -> tuple[str, str]:
         """Get a decision with reasoning from a player using structured output.
 
-        Returns:
+        Returns
+        -------
             Tuple of (choice, reasoning)
+
         """
         system_message = player.get_context(phase=context or "game", visible_info={})
 
@@ -202,21 +214,27 @@ Explain your reasoning (1-2 sentences) and make your choice."""
             return valid_choices[0], f"Error: {e}"
 
     def get_player_statement(
-        self, player: Player, prompt: str, context: str = "", max_tokens: int = 300
+        self,
+        player: Player,
+        prompt: str,
+        context: str = "",
+        max_tokens: int = 300,
     ) -> tuple[str, str]:
-        """
-        Get a free-form statement from a player using two-step structured output.
+        """Get a free-form statement from a player using two-step structured output.
         First gets thinking, then generates statement based on that thinking.
 
         Args:
+        ----
             player: The player making the statement
             prompt: The prompt for what to say
             context: Additional context
             max_tokens: Maximum length of response
 
         Returns:
+        -------
             Tuple of (thinking, statement) where thinking is internal deliberation
             and statement is the public message
+
         """
         system_message = player.get_context(phase=context or "game", visible_info={})
 
@@ -230,7 +248,7 @@ Explain your reasoning (1-2 sentences) and make your choice."""
                     "thinking": {
                         "type": "string",
                         "description": "Your internal deliberation and reasoning (1-2 sentences) - what you're actually thinking privately",
-                    }
+                    },
                 },
                 "required": ["thinking"],
             },
@@ -249,7 +267,7 @@ Explain your reasoning (1-2 sentences) and make your choice."""
                     {
                         "role": "user",
                         "content": f"{prompt}\n\nFirst, what are you thinking privately about this situation?",
-                    }
+                    },
                 ],
             )
 
@@ -269,7 +287,7 @@ Explain your reasoning (1-2 sentences) and make your choice."""
                         "statement": {
                             "type": "string",
                             "description": "Your public statement to other players - what you actually say out loud (1-3 sentences)",
-                        }
+                        },
                     },
                     "required": ["statement"],
                 },
@@ -286,7 +304,7 @@ Explain your reasoning (1-2 sentences) and make your choice."""
                     {
                         "role": "user",
                         "content": f"{prompt}\n\nYou were thinking: {thinking}\n\nNow, what do you say out loud to the other players?",
-                    }
+                    },
                 ],
             )
 

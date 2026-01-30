@@ -106,10 +106,16 @@ class TestGameIntegration:
         from rills.models import InfoCategory
 
         game.info_service.reveal_to_player(
-            alice.name, "I targeted Bob", category=InfoCategory.ACTION, day=1
+            alice.name,
+            "I targeted Bob",
+            category=InfoCategory.ACTION,
+            day=1,
         )
         game.info_service.reveal_to_player(
-            alice.name, "Bob seems suspicious of me", category=InfoCategory.STATEMENT, day=1
+            alice.name,
+            "Bob seems suspicious of me",
+            category=InfoCategory.STATEMENT,
+            day=1,
         )
 
         alice_context = game.info_service.build_context_for(alice.name)

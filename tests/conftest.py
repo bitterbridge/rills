@@ -7,7 +7,7 @@ from rills.player import Player
 from rills.roles import Role
 
 
-@pytest.fixture
+@pytest.fixture()
 def basic_players():
     """Create a basic set of players for testing."""
     return [
@@ -22,13 +22,13 @@ def basic_players():
     ]
 
 
-@pytest.fixture
+@pytest.fixture()
 def game_state(basic_players):
     """Create a basic game state for testing."""
     return GameState(players=basic_players)
 
 
-@pytest.fixture
+@pytest.fixture()
 def game_with_events():
     """Create a game state with all event modes enabled."""
     players = [

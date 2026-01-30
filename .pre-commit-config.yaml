@@ -36,7 +36,7 @@ repos:
     hooks:
       # Run the linter
       - id: ruff
-        args: [--fix, --exit-non-zero-on-fix]
+        args: [--fix, --exit-non-zero-on-fix, --select=ALL]  # Enable all rules
       # Note: ruff-format disabled - using Black for formatting
 
   # Type checking with mypy
@@ -51,13 +51,12 @@ repos:
           - types-pyyaml
           - python-dotenv>=1.0.0
         args: [--config-file=pyproject.toml]
-        exclude: ^tests/
+        exclude: ^tests/  # Tests can be less strict
 
-  # Security checks - only fail on medium/high severity
+  # Security checks - fail on low severity and above
   - repo: https://github.com/PyCQA/bandit
     rev: 1.7.6
     hooks:
       - id: bandit
-        args: ["-c", "pyproject.toml", "-ll"]  # Only medium/high severity
+        args: ["-c", "pyproject.toml", "-l"]  # Low severity and above
         additional_dependencies: ["bandit[toml]"]
-        exclude: ^tests/

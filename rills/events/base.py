@@ -22,7 +22,9 @@ class EventModifier(ABC):
         """Initialize event modifier.
 
         Args:
+        ----
             probability: Chance this event is active in a game (0.0 to 1.0)
+
         """
         self.probability = probability
         self.active = False
@@ -31,13 +33,11 @@ class EventModifier(ABC):
     @abstractmethod
     def name(self) -> str:
         """Human-readable name of the event."""
-        pass
 
     @property
     @abstractmethod
     def description(self) -> str:
         """Description of what this event does."""
-        pass
 
     def should_activate(self) -> bool:
         """Determine if this event should be active this game."""
@@ -53,7 +53,6 @@ class EventModifier(ABC):
 
         Use this to assign event-specific roles to players.
         """
-        pass
 
     @abstractmethod
     def on_player_eliminated(self, game: "GameState", player: "Player", reason: str) -> None:
@@ -64,7 +63,6 @@ class EventModifier(ABC):
         NOTE: This method is being phased out in favor of
         on_player_eliminated_effects(). For now, both are called.
         """
-        pass
 
     def on_night_start(self, game: "GameState") -> None:
         """Called at the start of night phase.
@@ -74,7 +72,6 @@ class EventModifier(ABC):
         NOTE: This method is being phased out in favor of
         on_night_start_effects(). For now, both are called.
         """
-        pass
 
     def on_night_end(self, game: "GameState") -> None:
         """Called at the end of night phase.
@@ -84,20 +81,24 @@ class EventModifier(ABC):
         NOTE: This method is being phased out in favor of
         on_night_end_effects(). For now, both are called.
         """
-        pass
 
     # New effect-based methods (override these for new events)
 
     def on_player_eliminated_effects(
-        self, game: "GameState", player: "Player", reason: str
+        self,
+        game: "GameState",
+        player: "Player",
+        reason: str,
     ) -> list["Effect"]:
         """Return effects to apply when a player is eliminated.
 
         This is the new effect-based approach that will replace
         on_player_eliminated() over time.
 
-        Returns:
+        Returns
+        -------
             List of Effect objects to apply
+
         """
         return []
 
@@ -107,8 +108,10 @@ class EventModifier(ABC):
         This is the new effect-based approach that will replace
         on_night_start() over time.
 
-        Returns:
+        Returns
+        -------
             List of Effect objects to apply
+
         """
         return []
 
@@ -118,8 +121,10 @@ class EventModifier(ABC):
         This is the new effect-based approach that will replace
         on_night_end() over time.
 
-        Returns:
+        Returns
+        -------
             List of Effect objects to apply
+
         """
         return []
 
@@ -138,8 +143,10 @@ class EventRegistry:
     def activate_random_events(self) -> list[EventModifier]:
         """Randomly activate events based on their probabilities.
 
-        Returns:
+        Returns
+        -------
             List of activated events
+
         """
         activated = []
         for event in self._events:
@@ -152,18 +159,27 @@ class EventRegistry:
         """Get all currently active events."""
         return [e for e in self._events if e.active]
 
+    def get_all_events(self) -> list[EventModifier]:
+        """Get all events (both active and inactive)."""
+        return list(self._events)
+
     def setup_game(self, game: "GameState") -> None:
         """Setup all active events for a new game."""
         for event in self.get_active_events():
             event.setup_game(game)
 
     def on_player_eliminated(
-        self, game: "GameState", player: "Player", reason: str
+        self,
+        game: "GameState",
+        player: "Player",
+        reason: str,
     ) -> list["Effect"]:
         """Notify all active events of player elimination.
 
-        Returns:
+        Returns
+        -------
             List of Effect objects to apply from all events
+
         """
         effects = []
         for event in self.get_active_events():
@@ -176,8 +192,10 @@ class EventRegistry:
     def on_night_start(self, game: "GameState") -> list["Effect"]:
         """Notify all active events of night start.
 
-        Returns:
+        Returns
+        -------
             List of Effect objects to apply from all events
+
         """
         effects = []
         for event in self.get_active_events():
@@ -190,8 +208,10 @@ class EventRegistry:
     def on_night_end(self, game: "GameState") -> list["Effect"]:
         """Notify all active events of night end.
 
-        Returns:
+        Returns
+        -------
             List of Effect objects to apply from all events
+
         """
         effects = []
         for event in self.get_active_events():

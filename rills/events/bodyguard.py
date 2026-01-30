@@ -61,13 +61,14 @@ class BodyguardEvent(EventModifier):
 
     def on_player_eliminated(self, game: "GameState", player: "Player", reason: str) -> None:
         """No special behavior on elimination."""
-        pass
 
     def set_protection(self, target_name: str) -> None:
         """Set who the bodyguard is protecting tonight.
 
         Args:
+        ----
             target_name: Name of player to protect
+
         """
         self._protected_player = target_name
 
@@ -75,18 +76,22 @@ class BodyguardEvent(EventModifier):
         """Check if bodyguard protects and sacrifices themselves.
 
         Args:
+        ----
             game: The game state
             target_name: Name of player being attacked
 
         Returns:
+        -------
             (protected, bodyguard_name) - True if protected and bodyguard dies
+
         """
         if target_name != self._protected_player:
             return False, None
 
         # Find the bodyguard
         bodyguard = next(
-            (p for p in game.players if p.name == self._bodyguard_name and p.alive), None
+            (p for p in game.players if p.name == self._bodyguard_name and p.alive),
+            None,
         )
 
         if not bodyguard:
@@ -102,16 +107,21 @@ class BodyguardEvent(EventModifier):
         return True, bodyguard.name
 
     def check_protection_effect(
-        self, game: "GameState", target_name: str
+        self,
+        game: "GameState",
+        target_name: str,
     ) -> tuple[bool, list["Effect"]]:
         """Check if bodyguard protects and return sacrifice effect.
 
         Args:
+        ----
             game: The game state
             target_name: Name of player being attacked
 
         Returns:
+        -------
             (protected, effects) - True if protected, with sacrifice effect
+
         """
         from ..services.effect_service import Effect
 
@@ -120,7 +130,8 @@ class BodyguardEvent(EventModifier):
 
         # Find the bodyguard
         bodyguard = next(
-            (p for p in game.players if p.name == self._bodyguard_name and p.alive), None
+            (p for p in game.players if p.name == self._bodyguard_name and p.alive),
+            None,
         )
 
         if not bodyguard:
@@ -141,17 +152,20 @@ class BodyguardEvent(EventModifier):
                     "public_reason": f"{bodyguard.name} sacrificed themselves to protect {target_name}",
                     "day": game.day_number,
                 },
-            )
+            ),
         ]
 
     def get_bodyguard_context(self, player: "Player") -> str:
         """Get bodyguard-specific context.
 
         Args:
+        ----
             player: The player to get context for
 
         Returns:
+        -------
             Context string if player is active bodyguard
+
         """
         if not hasattr(player, "is_bodyguard") or not player.is_bodyguard:
             return ""

@@ -25,6 +25,16 @@ class GhostEvent(EventModifier):
         self._pending_ghost: Player | None = None
 
     @property
+    def pending_ghost(self) -> Player | None:
+        """Get the pending ghost player."""
+        return self._pending_ghost
+
+    @pending_ghost.setter
+    def pending_ghost(self, value: Player | None) -> None:
+        """Set the pending ghost player."""
+        self._pending_ghost = value
+
+    @property
     def name(self) -> str:
         return "Ghost Mode"
 
@@ -34,20 +44,23 @@ class GhostEvent(EventModifier):
 
     def setup_game(self, game: "GameState") -> None:
         """No special setup needed for ghost mode."""
-        pass
 
     def on_player_eliminated(self, game: "GameState", player: "Player", reason: str) -> None:
         """10% chance for eliminated player to become a ghost."""
         if random.random() < 0.10:
             player.is_ghost = True  # Old flag (backward compatibility)
             player.add_modifier(
-                game, PlayerModifier(type="ghost", source="event:ghost")
+                game,
+                PlayerModifier(type="ghost", source="event:ghost"),
             )  # NEW: permanent modifier
             self._pending_ghost = player
             print(f"\n👻 {player.name}'s spirit rises as a ghost...")
 
     def on_player_eliminated_effects(
-        self, game: "GameState", player: "Player", reason: str
+        self,
+        game: "GameState",
+        player: "Player",
+        reason: str,
     ) -> list["Effect"]:
         """Return ghost transformation effect (10% chance)."""
         from ..services.effect_service import Effect
@@ -59,7 +72,7 @@ class GhostEvent(EventModifier):
                     target=player.name,
                     source="ghost_event",
                     data={"pending": True},
-                )
+                ),
             ]
         return []
 
@@ -81,7 +94,10 @@ class GhostEvent(EventModifier):
             )
 
             haunted_name, reasoning = llm.get_player_choice_with_reasoning(
-                player, prompt, [p.name for p in alive], f"{player.name} choosing who to haunt"
+                player,
+                prompt,
+                [p.name for p in alive],
+                f"{player.name} choosing who to haunt",
             )
 
             player.haunting_target = haunted_name

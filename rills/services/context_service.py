@@ -22,22 +22,30 @@ class ContextBuilder:
         """Initialize the context builder.
 
         Args:
+        ----
             info_service: Information service for accessing game state
+
         """
         self.info_service = info_service
 
     def build_system_context(
-        self, player: "Player", phase: str = "game", game: Optional["GameState"] = None
+        self,
+        player: "Player",
+        phase: str = "game",
+        game: Optional["GameState"] = None,
     ) -> str:
         """Build the system context for a player (personality, role, status).
 
         Args:
+        ----
             player: The player to build context for
             phase: Current game phase
             game: Optional game state for modifier checks
 
         Returns:
+        -------
             Formatted system context string
+
         """
         # Base role context
         context_parts = [
@@ -45,7 +53,7 @@ class ContextBuilder:
                 player_name=player.name,
                 personality=player.personality,
                 role_description=player.role_description,
-            )
+            ),
         ]
 
         # Add special status information
@@ -61,16 +69,21 @@ class ContextBuilder:
         return "\n".join(context_parts)
 
     def _build_special_status(
-        self, player: "Player", game: Optional["GameState"] = None
+        self,
+        player: "Player",
+        game: Optional["GameState"] = None,
     ) -> list[str]:
         """Build list of special status messages for a player.
 
         Args:
+        ----
             player: The player to check status for
             game: Optional game state for modifier checks
 
         Returns:
+        -------
             List of status strings
+
         """
         status = []
 
@@ -89,7 +102,7 @@ class ContextBuilder:
         is_ghost = player.is_ghost or (game and player.has_modifier(game, "ghost"))
         if is_ghost and player.haunting_target:
             status.append(
-                templates.SPECIAL_STATUS_TEMPLATES["ghost"].format(target=player.haunting_target)
+                templates.SPECIAL_STATUS_TEMPLATES["ghost"].format(target=player.haunting_target),
             )
 
         # Dual-check: old flag or new modifier (if game is available)
@@ -124,7 +137,7 @@ class ContextBuilder:
         is_lover = player.is_lover or (game and player.has_modifier(game, "lover"))
         if is_lover and player.lover_name:
             status.append(
-                templates.SPECIAL_STATUS_TEMPLATES["lover"].format(partner=player.lover_name)
+                templates.SPECIAL_STATUS_TEMPLATES["lover"].format(partner=player.lover_name),
             )
 
         # Dual-check: old flag or new modifier (if game is available)
@@ -135,17 +148,23 @@ class ContextBuilder:
         return status
 
     def build_information_context(
-        self, player_name: str, categories: list[InfoCategory] | None = None, max_items: int = 10
+        self,
+        player_name: str,
+        categories: list[InfoCategory] | None = None,
+        max_items: int = 10,
     ) -> str:
         """Build context from information visible to a player.
 
         Args:
+        ----
             player_name: Name of the player
             categories: Optional list of categories to filter by
             max_items: Maximum number of information items to include
 
         Returns:
+        -------
             Formatted information context string
+
         """
         if categories:
             # Build context for each category and combine
@@ -164,21 +183,28 @@ class ContextBuilder:
         return ""
 
     def build_for_night_kill(
-        self, player: "Player", targets: list[str], team_members: list[str]
+        self,
+        player: "Player",
+        targets: list[str],
+        team_members: list[str],
     ) -> str:
         """Build context for assassin kill decision.
 
         Args:
+        ----
             player: The assassin making the decision
             targets: Available targets
             team_members: Other assassins
 
         Returns:
+        -------
             Formatted prompt for kill decision
+
         """
         team_info = f"Your fellow Assassins: {', '.join(team_members)}"
         recent_events = self.build_information_context(
-            player.name, categories=[InfoCategory.DEATH, InfoCategory.VOTE, InfoCategory.STATEMENT]
+            player.name,
+            categories=[InfoCategory.DEATH, InfoCategory.VOTE, InfoCategory.STATEMENT],
         )
 
         return templates.NIGHT_KILL_PROMPT.format(
@@ -189,20 +215,27 @@ class ContextBuilder:
         )
 
     def build_for_protection(
-        self, player: "Player", targets: list[str], last_protected: str | None = None
+        self,
+        player: "Player",
+        targets: list[str],
+        last_protected: str | None = None,
     ) -> str:
         """Build context for doctor protection decision.
 
         Args:
+        ----
             player: The doctor making the decision
             targets: Available targets
             last_protected: Last person protected (can't repeat)
 
         Returns:
+        -------
             Formatted prompt for protection decision
+
         """
         recent_events = self.build_information_context(
-            player.name, categories=[InfoCategory.DEATH, InfoCategory.ACTION]
+            player.name,
+            categories=[InfoCategory.DEATH, InfoCategory.ACTION],
         )
 
         prompt = templates.DOCTOR_PROTECT_PROMPT.format(
@@ -220,14 +253,18 @@ class ContextBuilder:
         """Build context for detective investigation.
 
         Args:
+        ----
             player: The detective investigating
             targets: Available targets
 
         Returns:
+        -------
             Formatted prompt for investigation
+
         """
         recent_events = self.build_information_context(
-            player.name, categories=[InfoCategory.DEATH, InfoCategory.VOTE, InfoCategory.STATEMENT]
+            player.name,
+            categories=[InfoCategory.DEATH, InfoCategory.VOTE, InfoCategory.STATEMENT],
         )
 
         return templates.DETECTIVE_INVESTIGATE_PROMPT.format(
@@ -240,14 +277,18 @@ class ContextBuilder:
         """Build context for vigilante kill decision.
 
         Args:
+        ----
             player: The vigilante deciding
             choices: Available choices (including "Skip")
 
         Returns:
+        -------
             Formatted prompt for vigilante action
+
         """
         recent_events = self.build_information_context(
-            player.name, categories=[InfoCategory.DEATH, InfoCategory.VOTE, InfoCategory.STATEMENT]
+            player.name,
+            categories=[InfoCategory.DEATH, InfoCategory.VOTE, InfoCategory.STATEMENT],
         )
 
         return templates.VIGILANTE_KILL_PROMPT.format(
@@ -257,20 +298,27 @@ class ContextBuilder:
         )
 
     def build_for_resurrection(
-        self, player: "Player", dead_players: list[str], choices: list[str]
+        self,
+        player: "Player",
+        dead_players: list[str],
+        choices: list[str],
     ) -> str:
         """Build context for priest resurrection decision.
 
         Args:
+        ----
             player: The priest deciding
             dead_players: List of dead player names
             choices: Available choices (including "Skip")
 
         Returns:
+        -------
             Formatted prompt for resurrection
+
         """
         recent_events = self.build_information_context(
-            player.name, categories=[InfoCategory.DEATH, InfoCategory.STATEMENT]
+            player.name,
+            categories=[InfoCategory.DEATH, InfoCategory.STATEMENT],
         )
 
         return templates.PRIEST_RESURRECT_PROMPT.format(
@@ -284,14 +332,18 @@ class ContextBuilder:
         """Build context for bodyguard protection decision.
 
         Args:
+        ----
             player: The bodyguard deciding
             targets: Available targets
 
         Returns:
+        -------
             Formatted prompt for bodyguard protection
+
         """
         recent_events = self.build_information_context(
-            player.name, categories=[InfoCategory.DEATH, InfoCategory.ACTION]
+            player.name,
+            categories=[InfoCategory.DEATH, InfoCategory.ACTION],
         )
 
         return templates.BODYGUARD_PROTECT_PROMPT.format(
@@ -304,12 +356,15 @@ class ContextBuilder:
         """Build context for ghost haunting decision.
 
         Args:
+        ----
             player: The deceased player
             targets: Available targets to haunt
             death_reason: How they died
 
         Returns:
+        -------
             Formatted prompt for haunting decision
+
         """
         return templates.GHOST_HAUNT_PROMPT.format(
             player_name=player.name,
@@ -318,23 +373,31 @@ class ContextBuilder:
         )
 
     def build_for_discussion(
-        self, player: "Player", round_num: int, recent_statements: list[Statement] | None = None
+        self,
+        player: "Player",
+        round_num: int,
+        recent_statements: list[Statement] | None = None,
     ) -> str:
         """Build context for discussion phase.
 
         Args:
+        ----
             player: The player speaking
             round_num: Current discussion round number
             recent_statements: Recent statements from other players
 
         Returns:
+        -------
             Formatted prompt for discussion
+
         """
         context = self.build_information_context(player.name, max_items=15)
 
         if recent_statements:
             statements_text = "\n".join(
-                [f"- {s.speaker}: {s.content}" for s in recent_statements[-5:]]  # Last 5 statements
+                [
+                    f"- {s.speaker}: {s.content}" for s in recent_statements[-5:]
+                ],  # Last 5 statements
             )
 
             return templates.DISCUSSION_WITH_STATEMENTS.format(
@@ -346,17 +409,23 @@ class ContextBuilder:
             return templates.DISCUSSION_PROMPT.format(context=context or "The game has just begun.")
 
     def build_for_vote(
-        self, player: "Player", candidates: list[str], discussion_summary: str | None = None
+        self,
+        player: "Player",
+        candidates: list[str],
+        discussion_summary: str | None = None,
     ) -> str:
         """Build context for voting decision.
 
         Args:
+        ----
             player: The player voting
             candidates: Available candidates to vote for
             discussion_summary: Summary of discussion
 
         Returns:
+        -------
             Formatted prompt for voting
+
         """
         context = self.build_information_context(player.name, max_items=15)
 

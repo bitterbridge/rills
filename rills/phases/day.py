@@ -22,7 +22,9 @@ class DayPhaseHandler:
         """Execute the day phase where players discuss and vote.
 
         Args:
+        ----
             night_deaths: List of player names who died during the night
+
         """
         from ..formatting import h4
 
@@ -41,7 +43,9 @@ class DayPhaseHandler:
         print(h4("Discussion"))
         day_result = DayResult()
         day_result.discussion_rounds = self._conduct_discussion_rounds(
-            game, alive_players, num_rounds=2
+            game,
+            alive_players,
+            num_rounds=2,
         )
 
         # ==== VOTING ====
@@ -63,7 +67,9 @@ class DayPhaseHandler:
         """Display revelations about who died during the night.
 
         Args:
+        ----
             night_deaths: List of player names who died
+
         """
         if night_deaths:
             for name in night_deaths:
@@ -101,7 +107,10 @@ class DayPhaseHandler:
         print()
 
     def _conduct_discussion_rounds(
-        self, game: GameState, alive_players: list[Player], num_rounds: int
+        self,
+        game: GameState,
+        alive_players: list[Player],
+        num_rounds: int,
     ) -> list:
         """Run discussion rounds and return the conversation rounds."""
         from ..formatting import h5
@@ -111,7 +120,7 @@ class DayPhaseHandler:
         for round_num in range(1, num_rounds + 1):
             print(h5(f"Round {round_num}"))
 
-            def get_statement_for_player(player, context, round_number):
+            def get_statement_for_player(player, _context, round_number):
                 return self._get_discussion_statement(player, game, round_number)
 
             round_obj = game.conversation_service.conduct_round(
@@ -196,7 +205,7 @@ class DayPhaseHandler:
                 print(h5("Lynch"))
                 print("⚖️  The vote ended in a tie! No one was lynched.")
                 print(
-                    "ℹ️  When votes tie, no one is eliminated - the town must reach a clear majority.\n"
+                    "ℹ️  When votes tie, no one is eliminated - the town must reach a clear majority.\n",
                 )
                 return None
             else:
@@ -228,7 +237,10 @@ class DayPhaseHandler:
         return None
 
     def _get_discussion_statement(
-        self, player: Player, game: GameState, round_num: int = 1
+        self,
+        player: Player,
+        game: GameState,
+        round_num: int = 1,
     ) -> tuple[str, str]:
         """Get a player's statement during discussion."""
         alive_names = [p.name for p in game.get_alive_players() if p != player]
@@ -261,11 +273,17 @@ Share your thoughts (1-2 sentences)."""
         system_context = game.context_builder.build_system_context(player, "day")
 
         return self.llm.get_player_statement(
-            player=player, prompt=prompt, context=system_context, max_tokens=100
+            player=player,
+            prompt=prompt,
+            context=system_context,
+            max_tokens=100,
         )
 
     def _get_ghost_statement(
-        self, ghost: Player, haunted_player: Player, game: GameState
+        self,
+        ghost: Player,
+        haunted_player: Player,
+        game: GameState,
     ) -> tuple[str, str]:
         """Get a ghost's haunting statement."""
         prompt = f"""You are a ghost haunting {haunted_player.name}. Only {haunted_player.name} can hear you.
@@ -280,7 +298,10 @@ What do you whisper to {haunted_player.name}? (1 sentence, be eerie and cryptic)
         system_context = game.context_builder.build_system_context(ghost, "day")
 
         return self.llm.get_player_statement(
-            player=ghost, prompt=prompt, context=system_context, max_tokens=100
+            player=ghost,
+            prompt=prompt,
+            context=system_context,
+            max_tokens=100,
         )
 
     def _conduct_vote(self, game: GameState, alive_players: list[Player]) -> dict[str, str]:
@@ -295,7 +316,9 @@ What do you whisper to {haunted_player.name}? (1 sentence, be eerie and cryptic)
             choices = ["ABSTAIN"] + other_names
 
             prompt = game.context_builder.build_for_vote(
-                player, candidates=other_names, discussion_summary="Based on the discussion..."
+                player,
+                candidates=other_names,
+                discussion_summary="Based on the discussion...",
             )
             system_context = game.context_builder.build_system_context(player, "day")
 

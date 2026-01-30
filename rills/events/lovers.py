@@ -72,7 +72,8 @@ class LoversEvent(EventModifier):
             return
 
         lover = next(
-            (p for p in game.players if p.name == self._pending_heartbreak and p.alive), None
+            (p for p in game.players if p.name == self._pending_heartbreak and p.alive),
+            None,
         )
 
         if lover:
@@ -94,7 +95,8 @@ class LoversEvent(EventModifier):
             return []
 
         lover = next(
-            (p for p in game.players if p.name == self._pending_heartbreak and p.alive), None
+            (p for p in game.players if p.name == self._pending_heartbreak and p.alive),
+            None,
         )
 
         if lover:
@@ -114,7 +116,7 @@ class LoversEvent(EventModifier):
                         "public_reason": f"{lover.name} was found dead",
                         "day": game.day_number,
                     },
-                )
+                ),
             ]
 
         return []
@@ -123,10 +125,13 @@ class LoversEvent(EventModifier):
         """Get lover-specific context.
 
         Args:
+        ----
             player: The player to get context for
 
         Returns:
+        -------
             Context string if player is a lover
+
         """
         if not hasattr(player, "is_lover") or not player.is_lover:
             return ""

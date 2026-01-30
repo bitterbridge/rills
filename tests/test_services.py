@@ -50,7 +50,10 @@ class TestInformationService:
         service.register_player("Bob")
 
         info_id = service.reveal_to_player(
-            "Alice", "You killed someone", InfoCategory.ACTION, day=1
+            "Alice",
+            "You killed someone",
+            InfoCategory.ACTION,
+            day=1,
         )
 
         # Only Alice should know
@@ -244,7 +247,11 @@ class TestVoteService:
             return ("Charlie", f"I vote {player.name}")
 
         result = service.conduct_vote(
-            voters=voters, candidates=candidates, day=1, round_number=1, get_vote_func=get_vote
+            voters=voters,
+            candidates=candidates,
+            day=1,
+            round_number=1,
+            get_vote_func=get_vote,
         )
 
         assert result.eliminated == "Charlie"
@@ -264,7 +271,11 @@ class TestVoteService:
             return ("Alice", "Vote Alice")
 
         result = service.conduct_vote(
-            voters=voters, candidates=candidates, day=1, round_number=1, get_vote_func=get_vote
+            voters=voters,
+            candidates=candidates,
+            day=1,
+            round_number=1,
+            get_vote_func=get_vote,
         )
 
         assert result.eliminated is None
@@ -348,7 +359,10 @@ class TestEffectService:
         states["Alice"].add_modifier(PlayerModifier(type="drunk", source="test"))
 
         effect = Effect(
-            type="remove_modifier", target="Alice", source="game", data={"modifier_type": "drunk"}
+            type="remove_modifier",
+            target="Alice",
+            source="game",
+            data={"modifier_type": "drunk"},
         )
 
         new_states = service.apply(effect, states)
@@ -410,7 +424,11 @@ class TestEffectService:
 
     def test_create_modifier_effect_factory(self):
         effect = EffectService.create_modifier_effect(
-            target="Alice", modifier_type="drunk", source="event:drunk", expires_on=2, applied_on=1
+            target="Alice",
+            modifier_type="drunk",
+            source="event:drunk",
+            expires_on=2,
+            applied_on=1,
         )
 
         assert effect.type == "add_modifier"
@@ -419,7 +437,10 @@ class TestEffectService:
 
     def test_create_death_effect_factory(self):
         effect = EffectService.create_death_effect(
-            target="Alice", source="assassin", cause="assassination", day=1
+            target="Alice",
+            source="assassin",
+            cause="assassination",
+            day=1,
         )
 
         assert effect.type == "kill_player"

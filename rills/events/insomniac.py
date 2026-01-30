@@ -42,12 +42,12 @@ class InsomniacEvent(EventModifier):
             insomniac = random.choice(available)
             insomniac.is_insomniac = True  # Old flag (backward compatibility)
             insomniac.add_modifier(
-                game, PlayerModifier(type="insomniac", source="event:insomniac")
+                game,
+                PlayerModifier(type="insomniac", source="event:insomniac"),
             )  # NEW: permanent modifier
 
     def on_player_eliminated(self, game: "GameState", player: "Player", reason: str) -> None:
         """No special behavior on elimination."""
-        pass
 
     def on_night_start(self, game: "GameState") -> None:
         """Insomniac sees someone moving around."""
@@ -97,7 +97,7 @@ class InsomniacEvent(EventModifier):
             for insomniac_name, seen_name, was_dead in self._sightings:
                 if was_dead:
                     print(
-                        f"👁️  {insomniac_name} saw {seen_name} moving around at night... but isn't {seen_name} dead?!"
+                        f"👁️  {insomniac_name} saw {seen_name} moving around at night... but isn't {seen_name} dead?!",
                     )
                     # Note: Anomaly information could be tracked by InformationService
                 else:

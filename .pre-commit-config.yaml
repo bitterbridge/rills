@@ -36,7 +36,7 @@ repos:
     hooks:
       # Run the linter
       - id: ruff
-        args: [--fix, --exit-non-zero-on-fix, --select=ALL]  # Enable all rules
+        args: [--fix, --exit-non-zero-on-fix]  # Uses config from pyproject.toml
       # Note: ruff-format disabled - using Black for formatting
 
   # Type checking with mypy

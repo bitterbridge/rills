@@ -46,6 +46,7 @@ class Player:
     last_protected: str | None = None  # Doctor can't save same person twice in a row
     last_assassin_statement: str | None = None  # Backwards compatibility
     postgame_statement: str | None = None  # Backwards compatibility
+    action_feedback: str | None = None  # Feedback message about last night action
 
     def __post_init__(self) -> None:
         """Initialize player with role information."""

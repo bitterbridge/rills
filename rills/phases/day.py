@@ -37,7 +37,7 @@ class DayPhaseHandler:
 
         # ==== REVELATIONS ====
         print(h4("Revelations"))
-        self._display_game_summary(night_deaths)
+        self._display_game_summary(game, night_deaths)
 
         # ==== DISCUSSION ROUNDS ====
         print(h4("Discussion"))
@@ -63,20 +63,35 @@ class DayPhaseHandler:
 
         game.check_win_condition()
 
-    def _display_game_summary(self, night_deaths: list[str]) -> None:
+    def _display_game_summary(self, game: GameState, night_deaths: list[str]) -> None:
         """Display revelations about who died during the night.
 
         Args:
         ----
+            game: Current game state
             night_deaths: List of player names who died
 
         """
+        # Display deaths
         if night_deaths:
             for name in night_deaths:
                 print(f"{name} has been found dead.")
             print()
         else:
             print("No one died during the night.\n")
+
+        # Display action feedback for each player
+        alive_players = game.get_alive_players()
+        has_feedback = False
+        for player in alive_players:
+            if player.action_feedback:
+                print(f"📢 {player.name}: {player.action_feedback}")
+                has_feedback = True
+                # Clear the feedback after displaying it
+                player.action_feedback = None
+
+        if has_feedback:
+            print()
 
     def _display_night_summary(self, game: GameState) -> None:
         """Display summary of alive players and their roles/statuses."""

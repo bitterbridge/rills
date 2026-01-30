@@ -105,6 +105,9 @@ class NightPhaseHandler:
         if result.detective_result:
             print(f"🔍 {result.detective_result}")
 
+        # Track doctor effectiveness for feedback
+        doctor_blocked_attack = False
+
         # Resolve assassin kill
         if result.assassin_target:
             counter_killed = None
@@ -127,9 +130,20 @@ class NightPhaseHandler:
                 )
                 result.counter_kills.append(counter_killed)
                 deaths.append(counter_killed.name)
+
+                # Add feedback for assassins
+                for assassin in [p for p in game.get_alive_players() if p.is_assassin()]:
+                    assassin.action_feedback = f"Your target {result.assassin_target.name} counter-attacked! {counter_killed.name} was killed instead."
+
             elif result.doctor_target and result.doctor_target == result.assassin_target:
                 print(f"💊 The Doctor saved {result.assassin_target.name}.")
                 game.events.append("Someone was attacked but saved by the Doctor.")
+                doctor_blocked_attack = True
+
+                # Add feedback for assassins
+                for assassin in [p for p in game.get_alive_players() if p.is_assassin()]:
+                    assassin.action_feedback = f"Your assassination attempt on {result.assassin_target.name} was blocked by the Doctor!"
+
             else:
                 print(f"☠️  {result.assassin_target.name} was eliminated by the Assassins.")
                 print(
@@ -142,6 +156,10 @@ class NightPhaseHandler:
                 )
                 result.deaths.append(result.assassin_target)
                 deaths.append(result.assassin_target.name)
+
+                # Add feedback for assassins
+                for assassin in [p for p in game.get_alive_players() if p.is_assassin()]:
+                    assassin.action_feedback = f"You successfully eliminated {result.assassin_target.name}. They were a {result.assassin_target.role.display_name()}."
 
         # Resolve vigilante kill
         if result.vigilante_target:
@@ -173,8 +191,21 @@ class NightPhaseHandler:
                 )
                 result.counter_kills.append(counter_killed)
                 deaths.append(counter_killed.name)
+
+                # Add feedback for vigilante
+                if vigilante:
+                    vigilante.action_feedback = f"Your target {result.vigilante_target.name} counter-attacked! You were killed in the fight."
+
             elif result.doctor_target and result.doctor_target == result.vigilante_target:
-                pass  # Blocked by doctor
+                # Blocked by doctor
+                doctor_blocked_attack = True
+
+                # Add feedback for vigilante
+                if vigilante:
+                    vigilante.action_feedback = (
+                        f"Your attack on {result.vigilante_target.name} was blocked by the Doctor!"
+                    )
+
             else:
                 print(f"☠️  {result.vigilante_target.name} was found dead.")
                 print(
@@ -187,6 +218,20 @@ class NightPhaseHandler:
                 )
                 result.deaths.append(result.vigilante_target)
                 deaths.append(result.vigilante_target.name)
+
+                # Add feedback for vigilante
+                if vigilante:
+                    vigilante.action_feedback = f"You successfully eliminated {result.vigilante_target.name}. They were a {result.vigilante_target.role.display_name()}."
+
+        # Add feedback for doctor
+        if result.doctor_target:
+            doctors = [p for p in game.get_alive_players() if p.role == Role.DOCTOR]
+            if doctors:
+                doctor = doctors[0]
+                if doctor_blocked_attack:
+                    doctor.action_feedback = f"Your protection of {result.doctor_target.name} blocked an attack! You saved their life."
+                else:
+                    doctor.action_feedback = f"You protected {result.doctor_target.name}, but they were not attacked tonight."
 
         return deaths
 
@@ -393,6 +438,10 @@ Share your thoughts with your fellow Assassins (1-2 sentences)."""
             result = "IS an Assassin" if is_assassin else "is NOT an Assassin"
             print(f"  💭 {detective.name} thinks: {reasoning}")
             print(f"  🔍 {detective.name} investigates {choice}")
+
+            # Add feedback for detective
+            detective.action_feedback = f"You investigated {choice}. They {result}."
+
             return f"{detective.name} learned that {choice} {result}"
 
         return None
@@ -517,10 +566,13 @@ Be weird, be enthusiastic, be MAD. Science waits for no one!
             ("suicidal", "💀 Depression Serum", "injected with a serum causing dark thoughts"),
         ]
 
-        effect_type, effect_name, _description = random.choice(effects)
+        effect_type, effect_name, description = random.choice(effects)
 
         print(f"  🎲 Random effect selected: {effect_name}")
         print(f"  💉 {scientist.name} injects {target.name}!")
+
+        # Store feedback for the scientist
+        scientist.action_feedback = f"You injected {target.name} with your experimental serum! The subject was {description}. You'll see the results during the day..."
 
         # Apply the effect
         if effect_type == "zombie":

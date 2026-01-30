@@ -1,5 +1,7 @@
 """Ghost event - dead players may haunt the living."""
 
+from __future__ import annotations
+
 import random
 from typing import TYPE_CHECKING
 
@@ -42,10 +44,10 @@ class GhostEvent(EventModifier):
     def description(self) -> str:
         return "The dead may linger..."
 
-    def setup_game(self, game: "GameState") -> None:
+    def setup_game(self, game: GameState) -> None:
         """No special setup needed for ghost mode."""
 
-    def on_player_eliminated(self, game: "GameState", player: "Player", reason: str) -> None:
+    def on_player_eliminated(self, game: GameState, player: Player, reason: str) -> None:
         """10% chance for eliminated player to become a ghost."""
         if random.random() < 0.10:
             player.is_ghost = True  # Old flag (backward compatibility)
@@ -58,10 +60,10 @@ class GhostEvent(EventModifier):
 
     def on_player_eliminated_effects(
         self,
-        game: "GameState",
-        player: "Player",
+        game: GameState,
+        player: Player,
         reason: str,
-    ) -> list["Effect"]:
+    ) -> list[Effect]:
         """Return ghost transformation effect (10% chance)."""
         from ..services.effect_service import Effect
 
@@ -76,7 +78,7 @@ class GhostEvent(EventModifier):
             ]
         return []
 
-    def handle_ghost_choice(self, game: "GameState", llm: "LLMAgent") -> None:
+    def handle_ghost_choice(self, game: GameState, llm: LLMAgent) -> None:
         """Let pending ghost choose who to haunt."""
         if not self._pending_ghost:
             return

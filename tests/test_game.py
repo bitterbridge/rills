@@ -70,7 +70,8 @@ class TestGameState:
         game_state.eliminate_player(alice, "Test reason", "Alice was eliminated")
 
         assert len(bob.memories) == initial_memories + 1
-        assert "Alice was eliminated" in bob.memories
+        # Check for new death message format
+        assert "Alice died. They were an Assassin" in bob.memories[initial_memories]
 
     def test_check_win_condition_village_wins(self, game_state):
         """Test win condition when village eliminates all assassins."""

@@ -7,6 +7,8 @@ import random
 
 from .player import Player
 from .roles import Role
+from .services import InformationService, ConversationService, VoteService
+from .models import InfoCategory
 
 if TYPE_CHECKING:
     from .events import EventRegistry
@@ -23,6 +25,17 @@ class GameState:
     winner: Optional[str] = None
     events: list[str] = field(default_factory=list)
     event_registry: Optional["EventRegistry"] = None
+
+    # Service layer - initialized in __post_init__
+    info_service: InformationService = field(default_factory=InformationService, init=False)
+    conversation_service: ConversationService = field(default_factory=ConversationService, init=False)
+    vote_service: VoteService = field(default_factory=VoteService, init=False)
+
+    def __post_init__(self):
+        """Initialize services and register players."""
+        # Register all players with information service
+        for player in self.players:
+            self.info_service.register_player(player.name)
 
     def get_alive_players(self) -> list[Player]:
         """Get all players who are still alive."""
@@ -45,7 +58,7 @@ class GameState:
         Args:
             player: The player to eliminate
             reason: Full reason shown to humans
-            public_reason: What players are told (defaults to vague message)
+            public_reason: What players are told (defaults to role reveal)
         """
         player.alive = False
         # Human-visible event with full details
@@ -56,18 +69,27 @@ class GameState:
         if self.event_registry:
             self.event_registry.on_player_eliminated(self, player, reason)
 
-        # Players only get vague information (not role or method)
-        if public_reason is None:
-            public_reason = f"{player.name} has been eliminated."
+        # Use InformationService to reveal death with role
+        self.info_service.reveal_death(
+            player_name=player.name,
+            role=player.role.display_name(),
+            cause=reason,
+            day=self.day_number
+        )
 
+        # Backwards compatibility: Keep old memory system for now
+        death_message = f"{player.name} died. They were {player.role.display_name()}."
         for p in self.players:
             if p != player:
-                p.add_memory(public_reason)
+                p.add_memory(death_message)
 
     def check_win_condition(self) -> bool:
-        """Check if the game has been won."""
-        alive_assassins = len(self.get_alive_by_team("assassins"))
-        alive_village = len(self.get_alive_by_team("village"))
+        """Check if the game is over and set winner.
+
+        Returns True if game is over, False otherwise.
+        """
+        alive_assassins = len([p for p in self.players if p.alive and p.team == "assassins"])
+        alive_village = len([p for p in self.players if p.alive and p.team == "village"])
 
         if alive_assassins == 0:
             self.game_over = True

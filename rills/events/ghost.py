@@ -66,7 +66,7 @@ class GhostEvent(EventModifier):
                 f"Who do you choose to haunt?"
             )
 
-            haunted_name = llm.get_player_choice(
+            haunted_name, reasoning = llm.get_player_choice_with_reasoning(
                 player,
                 prompt,
                 [p.name for p in alive],
@@ -75,5 +75,6 @@ class GhostEvent(EventModifier):
 
             player.haunting_target = haunted_name
             print(f"👻 {player.name} chooses to haunt {haunted_name}...")
+            print(f"  💭 {player.name} thinks: {reasoning}")
 
         self._pending_ghost = None

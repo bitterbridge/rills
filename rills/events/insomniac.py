@@ -95,9 +95,17 @@ class InsomniacEvent(EventModifier):
     def on_night_end(self, game: "GameState") -> None:
         """Reveal insomniac sightings."""
         if self._sightings:
+            print("\n--- Insomniac Report ---")
             for insomniac_name, seen_name, was_dead in self._sightings:
                 if was_dead:
                     print(f"👁️  {insomniac_name} saw {seen_name} moving around at night... but isn't {seen_name} dead?!")
+                    # Everyone hears about this sighting
+                    for p in game.get_alive_players():
+                        p.add_memory(f"{insomniac_name} (Insomniac) reported seeing {seen_name} moving at night, despite {seen_name} being dead!")
                 else:
                     print(f"👁️  {insomniac_name} saw {seen_name} moving around at night...")
+                    # Everyone hears about this sighting
+                    for p in game.get_alive_players():
+                        p.add_memory(f"{insomniac_name} (Insomniac) reported seeing {seen_name} moving at night.")
+            print()
         self._sightings = []

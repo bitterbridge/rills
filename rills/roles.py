@@ -14,6 +14,13 @@ class Role(str, Enum):
     ZOMBIE = "Zombie"
     VILLAGER = "Villager"
 
+    def display_name(self) -> str:
+        """Get the singular display name for this role."""
+        if self == Role.ASSASSINS:
+            return "an Assassin"
+        # All other roles start with consonants, so use "a"
+        return f"a {self.value}"
+
 
 class RoleInfo(Protocol):
     """Information about a role."""

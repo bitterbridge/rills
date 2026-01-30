@@ -62,7 +62,8 @@ class LoversEvent(EventModifier):
 
         if lover:
             self._pending_heartbreak = lover.name
-            print(f"\n💔 {player.name}'s death will break someone's heart...\n")
+            # Give the surviving lover a heartbreak notification privately
+            lover.add_memory(f"💔 {player.name} has died. You are heartbroken and feel your life slipping away...")
 
     def on_night_start(self, game: "GameState") -> None:
         """Mark heartbreak as ready at the start of each new night."""
@@ -80,8 +81,12 @@ class LoversEvent(EventModifier):
         )
 
         if lover:
-            lover.alive = False
-            print(f"\n💔 {lover.name} died of a broken heart after losing their beloved!\n")
+            # Kill them quietly - just like any other death
+            game.eliminate_player(
+                lover,
+                f"Died of a broken heart after losing {lover.lover_name}.",
+                f"{lover.name} was found dead."
+            )
 
         self._pending_heartbreak = None
         self._heartbreak_ready = False

@@ -57,7 +57,7 @@ class TestZombieEvent:
         assert "zombie" in event.description.lower()
 
     def test_zombie_chain_reaction(self):
-        """Test zombie chain reaction on elimination."""
+        """Test zombie resurrection after elimination."""
         zombie = Player(name="Zed", role=Role.ZOMBIE, personality="Quiet")
         zombie.is_zombie = True
         villager = Player(name="Frank", role=Role.VILLAGER, personality="Normal")
@@ -69,8 +69,13 @@ class TestZombieEvent:
         # Eliminate the zombie
         event.on_player_eliminated(game, zombie, "Killed")
 
-        # Villager should be marked for zombification
-        assert villager.pending_zombification is True
+        # Zombie should be pending rise (internal to the event)
+        assert zombie in event._pending_rise
+
+        # After night start, zombie should become active
+        event.on_night_start(game)
+        assert zombie in event._active_zombies
+        assert zombie not in event._pending_rise
 
 
 class TestGhostEvent:

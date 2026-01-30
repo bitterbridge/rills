@@ -68,6 +68,10 @@ class DrunkEvent(EventModifier):
         if not hasattr(voter, 'is_drunk') or not voter.is_drunk:
             return intended_target
 
+        # Don't redirect abstentions
+        if intended_target == "ABSTAIN (don't vote for anyone)":
+            return intended_target
+
         # Choose a random alive player (could be the same as intended)
         alive = [p for p in all_players if p.alive]
         if not alive:

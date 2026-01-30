@@ -112,7 +112,8 @@ class TestGameIntegration:
 
         # Bob gets eliminated, Alice should remember
         game.eliminate_player(bob, "Killed", "Bob was eliminated")
-        assert "Bob was eliminated" in alice.memories
+        # Check for new death message format
+        assert "Bob died. They were a Villager" in alice.memories[-1]
         assert len(alice.memories) == 3
 
     def test_special_mode_flags(self):

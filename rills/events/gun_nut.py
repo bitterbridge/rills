@@ -58,11 +58,17 @@ class GunNutEvent(EventModifier):
     def check_counter_attack(
         self,
         game: "GameState",
-        target: "Player"
+        target: "Player",
+        attacker: Optional["Player"] = None
     ) -> Optional["Player"]:
         """Check if gun nut fights back when targeted.
 
-        Returns the assassin who dies, if any.
+        Args:
+            game: The game state
+            target: The player being attacked
+            attacker: The specific attacker (if known, e.g., Vigilante)
+
+        Returns the attacker who dies, if any.
         """
         from ..roles import Role
 
@@ -70,6 +76,10 @@ class GunNutEvent(EventModifier):
             return None
 
         if random.random() < 0.50:
+            # If we know the specific attacker, return them
+            if attacker:
+                return attacker
+            # Otherwise, pick a random Assassin (for Assassins team attacks)
             assassins = [p for p in game.get_alive_players() if p.role == Role.ASSASSINS]
             if assassins:
                 return random.choice(assassins)
